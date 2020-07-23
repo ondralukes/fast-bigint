@@ -19,18 +19,6 @@
   } while(0)
 
 
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-  #define WRITE_UINT64_LE(ptr, number) *ptr = number;
-  #define READ_UINT64_LE(ptr) *ptr;
-#else
-  #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-    #define WRITE_UINT64_LE(ptr, number) *ptr = bswap_64(number);
-    #define READ_UINT64_LE(ptr) bswap64(*ptr);
-  #else
-    #error PDP-endian not supported
-  #endif
-#endif
-
 void * getBufferData(napi_env env, napi_value buffer, size_t* length){
   void* res;
   NAPI_CALL(
@@ -46,7 +34,7 @@ void * getBufferData(napi_env env, napi_value buffer, size_t* length){
 }
 
 static napi_value
-setUInt64(napi_env env, napi_callback_info info){
+ex_setUInt64(napi_env env, napi_callback_info info){
 
   napi_value argv[2];
   size_t argc = 2;
@@ -86,7 +74,7 @@ setUInt64(napi_env env, napi_callback_info info){
 }
 
 static napi_value
-add(napi_env env, napi_callback_info info){
+ex_add(napi_env env, napi_callback_info info){
 
   napi_value argv[3];
   size_t argc = 3;
@@ -107,48 +95,13 @@ add(napi_env env, napi_callback_info info){
   napi_value js_a = argv[1];
   napi_value js_b = argv[2];
 
-  size_t ressz;
-  size_t asz;
-  size_t bsz;
+  bigint_t res, a, b;
 
-  uint64_t * res = getBufferData(env, js_result, &ressz);
-  uint64_t * a = getBufferData(env, js_a, &asz);
-  uint64_t * b = getBufferData(env, js_b, &bsz);
+  getBigint(env, js_a, &a);
+  getBigint(env, js_b, &b);
+  getBigint(env, js_result, &res);
 
-  ressz /= sizeof(uint64_t);
-  asz /= sizeof(uint64_t);
-  bsz /= sizeof(uint64_t);
-
-  uint64_t carry = 0;
-  uint64_t temp;
-  for(uint64_t i = 0; i < ressz;i++){
-    uint64_t val = carry;
-    carry = 0;
-    if(i < asz){
-      uint64_t a_val = READ_UINT64_LE(a);
-      temp = val;
-      val += a_val;
-      if(val < temp){
-        carry++;
-      }
-    }
-    if(i < bsz){
-      uint64_t b_val = READ_UINT64_LE(b);
-      temp = val;
-      val += b_val;
-      if(val < temp){
-        carry++;
-      }
-    }
-
-    WRITE_UINT64_LE(res, val);
-    res++;
-    b++;
-    a++;
-  }
-
-
-
+  add(&a, &b, &res);
   return NULL;
 }
 
@@ -193,14 +146,14 @@ napi_value create_addon(napi_env env){
   add_function(
     env,
     res,
-    setUInt64,
+    ex_setUInt64,
     "setUInt64"
   );
 
   add_function(
     env,
     res,
-    add,
+    ex_add,
     "add"
   );
 

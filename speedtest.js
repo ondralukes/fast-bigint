@@ -64,9 +64,10 @@ function runFastIntTest(len) {
     let min = 10000000000;
     let max = 0;
     let avg = 0;
+    let res;
     for(let i = 0;i<256;i++){
         let prev = process.hrtime();
-        const res = FastInt.add(a, b);
+        res = FastInt.add(a, b);
         const t = parseHrtime(process.hrtime(prev));
         if(t > max) max = t;
         if(t < min) min = t;

@@ -4,4 +4,7 @@
 #include <node_api.h>
 
 #include <stdlib.h>
+
+#include "arithmetic.h"
+#include "napi_utils.h"
 #endif

@@ -6,9 +6,11 @@ class Index{
         if(Buffer.isBuffer(bufferOrNumber)){
             t.setBuffer(bufferOrNumber);
         } else {
-            this.setBuffer(Buffer.alloc(1024));
             if(typeof bufferOrNumber === 'number') {
+                this.setBuffer(Buffer.alloc(8));
                 t.setNumber(bufferOrNumber);
+            } else {
+                this.setBuffer(Buffer.alloc(1024));
             }
         }
     }
