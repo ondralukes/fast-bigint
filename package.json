@@ -1,8 +1,12 @@
 {
   "name": "fast-bigint",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Module for fast operations with long integers.",
   "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ondralukes/fast-bigint"
+  },
   "scripts": {
     "postinstall": "cd internal && node-gyp configure && node-gyp build",
     "pretest": "npm i && cd internal && node-gyp configure && node-gyp build",
