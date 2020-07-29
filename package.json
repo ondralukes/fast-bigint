@@ -1,6 +1,6 @@
 {
   "name": "fast-bigint",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "Module for fast operations with long integers.",
   "main": "index.js",
   "repository": {
