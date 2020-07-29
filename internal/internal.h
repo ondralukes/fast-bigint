@@ -7,4 +7,5 @@
 
 #include "arithmetic.h"
 #include "napi_utils.h"
+#include "async.h"
 #endif

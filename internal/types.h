@@ -4,6 +4,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include <js_native_api.h>
+#include <node_api.h>
+
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   #define WRITE_UINT64_LE(ptr, number) *ptr = number;
   #define READ_UINT64_LE(ptr) *ptr;
@@ -20,4 +23,13 @@ typedef struct {
   uint64_t* base;
   size_t length;
 } bigint_t;
+
+enum op_type{Add};
+
+typedef struct {
+  enum op_type type;
+  bigint_t* argv;
+  size_t argc;
+  napi_threadsafe_function callback;
+} async_op_t;
 #endif

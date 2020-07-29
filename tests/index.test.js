@@ -61,4 +61,15 @@ describe('add', function () {
         console.log(`${fastIntNanos} < ${bigIntNanos} (${bigIntNanos - fastIntNanos} ns faster)`);
         expect(fastIntNanos).toBeLessThan(bigIntNanos);
     });
+    it('should add async using await', async function () {
+        const x = await FastInt.addAsync(new FastInt(1), new FastInt(2));
+        expect(x.buffer).toStrictEqual(Buffer.from('0300000000000000', 'hex'));
+    });
+    it('should add async using callback', async function () {
+        FastInt.addAsync(new FastInt(1), new FastInt(2), (x) => {
+            expect(x.buffer).toStrictEqual(Buffer.from('0300000000000000', 'hex'));
+            done();
+        });
+
+    });
 })

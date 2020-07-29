@@ -1,4 +1,4 @@
-#include "internal.h"
+  #include "internal.h"
 
 #define NAPI_CALL(env, call)                                      \
   do {                                                            \
@@ -105,6 +105,69 @@ ex_add(napi_env env, napi_callback_info info){
   return NULL;
 }
 
+static napi_value
+ex_addAsync(napi_env env, napi_callback_info info){
+
+  napi_value argv[4];
+  size_t argc = 4;
+
+  NAPI_CALL(
+    env,
+    napi_get_cb_info(
+      env,
+      info,
+      &argc,
+      argv,
+      NULL,
+      NULL
+    )
+  );
+
+  async_op_t* op = malloc(sizeof(async_op_t));
+  op->type = Add;
+
+  op->argv = malloc(sizeof(bigint_t) * 3);
+  for(int i = 0;i<3;i++){
+    getBigint(env, argv[i], &op->argv[i]);
+  }
+
+  op->argc = 3;
+  createThreadsafeFunc(env, argv[3], &op->callback);
+  runAsync(op);
+  return NULL;
+}
+
+static napi_value
+ex_setMaxThreads(napi_env env, napi_callback_info info){
+  napi_value arg;
+  size_t argc = 1;
+
+  NAPI_CALL(
+    env,
+    napi_get_cb_info(
+      env,
+      info,
+      &argc,
+      &arg,
+      NULL,
+      NULL
+    )
+  );
+
+  uint64_t threads;
+  NAPI_CALL(
+    env,
+    napi_get_value_int64(
+      env,
+      arg,
+      &threads
+    )
+  );
+
+  setMaxThreads(threads);
+  return NULL;
+}
+
 void*
 add_function(
   napi_env env,
@@ -157,9 +220,23 @@ napi_value create_addon(napi_env env){
     "add"
   );
 
+  add_function(
+    env,
+    res,
+    ex_addAsync,
+    "addAsync"
+  );
+
+  add_function(
+    env,
+    res,
+    ex_setMaxThreads,
+    "setMaxThreads"
+  );
   return res;
 }
 
 NAPI_MODULE_INIT(){
+  initAsync();
   return create_addon(env);
 }

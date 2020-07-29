@@ -16,9 +16,19 @@ const b = new FastBigInt(Buffer.from([0xff, 0xee, 0xff]));
 
 // Add using 'add(a, b)'
 const sum = FastBigInt.add(a, b);
+
+// Set thread limit for async functions (default 8)
+FastBigInt.setMaxThreads(8);
+
+// Add async on new thread
+const sum = await FastBigInt.addAsync(a, b);
+
+FastBigInt.addAsync(a, b, (sum) => {
+    // Callback
+});
 ```
 # Performance
-Addition of two random numbers. Time is in nanoseconds. Faster times are **bold**
+Addition of two random numbers using `add` function. Time is in nanoseconds. Faster times are **bold**
 
 |Type        |Length      |Min         |Max         |Avg           |
 |------------|------------|------------|------------|--------------|
