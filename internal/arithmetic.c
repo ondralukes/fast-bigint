@@ -1,6 +1,27 @@
 #include "arithmetic.h"
 
-void add(bigint_t* a, bigint_t* b, bigint_t* res){
+bigint_t* add(bigint_t* a, bigint_t* b){
+  uint64_t resLength = a->length;
+  if(b->length > resLength) resLength = b->length;
+
+
+  uint64_t lastByteSum = 0;
+
+  if(resLength == a->length){
+    uint8_t * lastByte = (uint8_t*) a->base;
+    lastByte += resLength * 8 - 1;
+    lastByteSum += *lastByte;
+  }
+
+  if(resLength == b->length){
+    uint8_t * lastByte = (uint8_t*) b->base;
+    lastByte += resLength * 8 - 1;
+    lastByteSum += *lastByte;
+  }
+
+  if(lastByteSum > 255) resLength++;
+
+  bigint_t* res = createEmptyBigint(resLength);
   uint64_t * aptr = a->base;
   uint64_t * bptr = b->base;
   uint64_t * resptr = res->base;
@@ -32,4 +53,6 @@ void add(bigint_t* a, bigint_t* b, bigint_t* res){
     bptr++;
     aptr++;
   }
+
+  return res;
 }

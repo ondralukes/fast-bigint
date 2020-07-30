@@ -6,7 +6,8 @@
         'internal.c',
         'arithmetic.c',
         'napi_utils.c',
-        'async.c'
+        'async.c',
+        'types.c'
         ],
     }
   ]

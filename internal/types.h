@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 #include <js_native_api.h>
 #include <node_api.h>
@@ -28,8 +29,11 @@ enum op_type{Add};
 
 typedef struct {
   enum op_type type;
-  bigint_t* argv;
+  bigint_t** argv;
   size_t argc;
   napi_threadsafe_function callback;
 } async_op_t;
+
+bigint_t* createEmptyBigint(uint64_t size);
+void destroyBigint(bigint_t* bigint);
 #endif

@@ -17,10 +17,12 @@ void setMaxThreads(uint64_t n){
 }
 
 void execute(async_op_t * op){
+  bigint_t* res = NULL;
   if(op->type == Add){
-    add(&op->argv[1],&op->argv[2],&op->argv[0]);
+    res = add(op->argv[0],op->argv[1]);
   }
-  callThreadsafeFunc(op->callback);
+
+  callThreadsafeFunc(op->callback, &res);
   releaseThreadsafeFunc(op->callback);
 };
 

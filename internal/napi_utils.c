@@ -31,6 +31,66 @@ void getBigint(napi_env env, napi_value buf, bigint_t *res){
   res->length /= sizeof(uint64_t);
 }
 
+bigint_t* getBigintPtr(napi_env env, napi_value val){
+  int64_t res;
+
+  NAPI_CALL(
+    env,
+    napi_get_value_int64(
+      env,
+      val,
+      &res
+    )
+  );
+
+  return res;
+}
+
+napi_value fromBigintPtr(napi_env env, bigint_t * ptr){
+  napi_value res;
+
+  NAPI_CALL(
+    env,
+    napi_create_int64(
+      env,
+      (uint64_t) ptr,
+      &res
+    )
+  );
+
+  return res;
+}
+
+void tsfn_result_cb(
+  napi_env env,
+  napi_value js_callback,
+  void* context,
+  void* data){
+    uint64_t ptr = *((uint64_t*)data);
+    napi_value res;
+    NAPI_CALL(
+      env,
+      napi_create_int64(
+        env,
+        ptr,
+        &res
+      )
+    );
+
+    napi_value tmp;
+    NAPI_CALL(
+      env,
+      napi_call_function(
+        env,
+        js_callback,
+        js_callback,
+        1,
+        &res,
+        NULL
+      )
+    );
+}
+
 void createThreadsafeFunc(napi_env env, napi_value func, napi_threadsafe_function * res){
   napi_value resource_name;
   NAPI_CALL(
@@ -55,16 +115,16 @@ void createThreadsafeFunc(napi_env env, napi_value func, napi_threadsafe_functio
       NULL, //thread_finalize_data
       NULL, //thread_finalize_cb
       NULL, //context
-      NULL, //call_js_cb
+      tsfn_result_cb, //call_js_cb
       res   //result
     )
   );
 }
 
-void callThreadsafeFunc(napi_threadsafe_function func){
-  napi_status res = napi_call_threadsafe_function(
+void callThreadsafeFunc(napi_threadsafe_function func, void* data){
+  napi_call_threadsafe_function(
     func,
-    NULL,
+    data,
     napi_tsfn_blocking
   );
 }

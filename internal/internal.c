@@ -51,12 +51,7 @@ ex_setUInt64(napi_env env, napi_callback_info info){
     )
   );
 
-  napi_value buffer = argv[0];
-  napi_value num = argv[1];
-
-
-  size_t length;
-  uint64_t * ptr = getBufferData(env, buffer, &length);
+  bigint_t * bigint = getBigintPtr(env, argv[0]);
 
   uint64_t number;
 
@@ -64,20 +59,21 @@ ex_setUInt64(napi_env env, napi_callback_info info){
     env,
     napi_get_value_int64(
       env,
-      num,
+      argv[1],
       &number
     )
   );
 
-  WRITE_UINT64_LE(ptr, number);
+  memset(bigint->base, 0, bigint->length * 8);
+  WRITE_UINT64_LE(bigint->base, number);
   return NULL;
 }
 
 static napi_value
 ex_add(napi_env env, napi_callback_info info){
 
-  napi_value argv[3];
-  size_t argc = 3;
+  napi_value argv[2];
+  size_t argc = 2;
 
   NAPI_CALL(
     env,
@@ -91,25 +87,18 @@ ex_add(napi_env env, napi_callback_info info){
     )
   );
 
-  napi_value js_result = argv[0];
-  napi_value js_a = argv[1];
-  napi_value js_b = argv[2];
+  bigint_t* a = getBigintPtr(env, argv[0]);
+  bigint_t* b = getBigintPtr(env, argv[1]);
 
-  bigint_t res, a, b;
-
-  getBigint(env, js_a, &a);
-  getBigint(env, js_b, &b);
-  getBigint(env, js_result, &res);
-
-  add(&a, &b, &res);
-  return NULL;
+  bigint_t* res = add(a, b);
+  return fromBigintPtr(env, res);
 }
 
 static napi_value
 ex_addAsync(napi_env env, napi_callback_info info){
 
-  napi_value argv[4];
-  size_t argc = 4;
+  napi_value argv[3];
+  size_t argc = 3;
 
   NAPI_CALL(
     env,
@@ -127,12 +116,12 @@ ex_addAsync(napi_env env, napi_callback_info info){
   op->type = Add;
 
   op->argv = malloc(sizeof(bigint_t) * 3);
-  for(int i = 0;i<3;i++){
-    getBigint(env, argv[i], &op->argv[i]);
+  for(int i = 0;i<2;i++){
+    op->argv[i] = getBigintPtr(env, argv[i]);
   }
 
-  op->argc = 3;
-  createThreadsafeFunc(env, argv[3], &op->callback);
+  op->argc = 2;
+  createThreadsafeFunc(env, argv[2], &op->callback);
   runAsync(op);
   return NULL;
 }
@@ -165,6 +154,174 @@ ex_setMaxThreads(napi_env env, napi_callback_info info){
   );
 
   setMaxThreads(threads);
+  return NULL;
+}
+
+void destructor(napi_env env,void* finalize_data,void* finalize_hint){
+  destroyBigint((bigint_t * ) finalize_data);
+}
+
+static napi_value
+ex_create(napi_env env, napi_callback_info info){
+  napi_value argv[2];
+  size_t argc = 2;
+
+  NAPI_CALL(
+    env,
+    napi_get_cb_info(
+      env,
+      info,
+      &argc,
+      argv,
+      NULL,
+      NULL
+    )
+  );
+
+  bigint_t* bigint;
+  if(argc == 1){
+    bigint = createEmptyBigint(1);
+    memset(bigint->base, 0, sizeof(uint64_t));
+  } else {
+    size_t size;
+    void* data = getBufferData(env, argv[1], &size);
+
+    size_t alignedSize = (size + 7)/8;
+
+    //Allocate buffer
+    bigint = createEmptyBigint(alignedSize);
+
+    //Clear non-copied part
+    bigint->base[alignedSize - 1] = 0;
+
+    //Copy
+    memcpy(bigint->base, data, size);
+  }
+
+  napi_value js_ptr;
+  NAPI_CALL(
+    env,
+    napi_create_int64(
+      env,
+      (int64_t) bigint,
+      &js_ptr
+    )
+  );
+
+  NAPI_CALL(
+    env,
+    napi_add_finalizer(
+      env,
+      argv[0],
+      bigint,
+      destructor,
+      NULL,
+      NULL
+    )
+  );
+
+  return js_ptr;
+}
+
+static napi_value
+ex_fromPtr(napi_env env, napi_callback_info info){
+  napi_value argv[2];
+  size_t argc = 2;
+
+  NAPI_CALL(
+    env,
+    napi_get_cb_info(
+      env,
+      info,
+      &argc,
+      argv,
+      NULL,
+      NULL
+    )
+  );
+
+  bigint_t* bigint = getBigintPtr(env, argv[1]);
+
+  NAPI_CALL(
+    env,
+    napi_add_finalizer(
+      env,
+      argv[0],
+      bigint,
+      destructor,
+      NULL,
+      NULL
+    )
+  );
+
+  return NULL;
+}
+
+
+static napi_value
+ex_getBuffer(napi_env env, napi_callback_info info){
+  napi_value arg;
+  size_t argc = 1;
+
+  NAPI_CALL(
+    env,
+    napi_get_cb_info(
+      env,
+      info,
+      &argc,
+      &arg,
+      NULL,
+      NULL
+    )
+  );
+
+  bigint_t* bigint = getBigintPtr(env, arg);
+
+  napi_value buf;
+  NAPI_CALL(
+    env,
+    napi_create_buffer_copy(
+      env,
+      bigint->length * 8,
+      bigint->base,
+      NULL,
+      &buf
+    )
+  );
+
+  return buf;
+}
+
+static napi_value
+ex_update(napi_env env, napi_callback_info info){
+  napi_value argv[2];
+  size_t argc = 2;
+
+  NAPI_CALL(
+    env,
+    napi_get_cb_info(
+      env,
+      info,
+      &argc,
+      argv,
+      NULL,
+      NULL
+    )
+  );
+
+  int64_t ptr;
+
+  NAPI_CALL(
+    env,
+    napi_get_value_int64(
+      env,
+      argv[0],
+      &ptr
+    )
+  );
+
+  getBigint(env, argv[1], (bigint_t*)ptr);
+
   return NULL;
 }
 
@@ -232,6 +389,27 @@ napi_value create_addon(napi_env env){
     res,
     ex_setMaxThreads,
     "setMaxThreads"
+  );
+
+  add_function(
+    env,
+    res,
+    ex_create,
+    "create"
+  );
+
+  add_function(
+    env,
+    res,
+    ex_fromPtr,
+    "fromPtr"
+  );
+
+  add_function(
+    env,
+    res,
+    ex_getBuffer,
+    "getBuffer"
   );
   return res;
 }
