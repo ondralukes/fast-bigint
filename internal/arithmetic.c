@@ -56,3 +56,47 @@ bigint_t* add(bigint_t* a, bigint_t* b){
 
   return res;
 }
+
+bigint_t* sub(bigint_t* a, bigint_t* b){
+  uint64_t resLength = a->length-1;
+  while(resLength < b->length){
+    if(a->base[resLength] > b->base[resLength]) break;
+    resLength--;
+  }
+
+  resLength++;
+
+  bigint_t* res = createEmptyBigint(resLength);
+
+  uint64_t* resptr = res->base;
+  uint64_t* aptr = a->base;
+  uint64_t* bptr = b->base;
+
+  uint64_t carry = 0;
+
+  uint64_t val,tmp;
+  for(uint64_t i = 0; i < res->length;i++){
+    val = READ_UINT64_LE(aptr);
+
+    if(i < b->length){
+      tmp = val;
+      val -= READ_UINT64_LE(bptr);
+      val -= carry;
+      if(val > tmp){
+        carry = 1;
+      } else {
+        carry = 0;
+      }
+    } else {
+      val -= carry;
+      carry = 0;
+    }
+
+    WRITE_UINT64_LE(resptr, val);
+    resptr++;
+    aptr++;
+    bptr++;
+  }
+
+  return res;
+}

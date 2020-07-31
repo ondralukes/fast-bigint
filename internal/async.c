@@ -20,6 +20,8 @@ void execute(async_op_t * op){
   bigint_t* res = NULL;
   if(op->type == Add){
     res = add(op->argv[0],op->argv[1]);
+  } else if(op->type == Sub){
+    res = sub(op->argv[0],op->argv[1]);
   }
 
   callThreadsafeFunc(op->callback, &res);

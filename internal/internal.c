@@ -95,6 +95,31 @@ ex_add(napi_env env, napi_callback_info info){
 }
 
 static napi_value
+ex_sub(napi_env env, napi_callback_info info){
+
+  napi_value argv[2];
+  size_t argc = 2;
+
+  NAPI_CALL(
+    env,
+    napi_get_cb_info(
+      env,
+      info,
+      &argc,
+      argv,
+      NULL,
+      NULL
+    )
+  );
+
+  bigint_t* a = getBigintPtr(env, argv[0]);
+  bigint_t* b = getBigintPtr(env, argv[1]);
+
+  bigint_t* res = sub(a, b);
+  return fromBigintPtr(env, res);
+}
+
+static napi_value
 ex_addAsync(napi_env env, napi_callback_info info){
 
   napi_value argv[3];
@@ -114,6 +139,38 @@ ex_addAsync(napi_env env, napi_callback_info info){
 
   async_op_t* op = malloc(sizeof(async_op_t));
   op->type = Add;
+
+  op->argv = malloc(sizeof(bigint_t) * 3);
+  for(int i = 0;i<2;i++){
+    op->argv[i] = getBigintPtr(env, argv[i]);
+  }
+
+  op->argc = 2;
+  createThreadsafeFunc(env, argv[2], &op->callback);
+  runAsync(op);
+  return NULL;
+}
+
+static napi_value
+ex_subAsync(napi_env env, napi_callback_info info){
+
+  napi_value argv[3];
+  size_t argc = 3;
+
+  NAPI_CALL(
+    env,
+    napi_get_cb_info(
+      env,
+      info,
+      &argc,
+      argv,
+      NULL,
+      NULL
+    )
+  );
+
+  async_op_t* op = malloc(sizeof(async_op_t));
+  op->type = Sub;
 
   op->argv = malloc(sizeof(bigint_t) * 3);
   for(int i = 0;i<2;i++){
@@ -380,8 +437,22 @@ napi_value create_addon(napi_env env){
   add_function(
     env,
     res,
+    ex_sub,
+    "sub"
+  );
+
+  add_function(
+    env,
+    res,
     ex_addAsync,
     "addAsync"
+  );
+
+  add_function(
+    env,
+    res,
+    ex_subAsync,
+    "subAsync"
   );
 
   add_function(

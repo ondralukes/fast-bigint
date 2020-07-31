@@ -25,7 +25,7 @@ typedef struct {
   size_t length;
 } bigint_t;
 
-enum op_type{Add};
+enum op_type{Add, Sub};
 
 typedef struct {
   enum op_type type;

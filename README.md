@@ -3,7 +3,7 @@ Module for fast operations with long integers.
 
 Arithmetic operations are written in C.
 # Warning
-This module is in early development state. It only supports addition now.
+This module is in early development state. It only supports addition and subtraction now.
 # Usage
 ```javascript
 const FastBigInt = require('fast-bigint');
@@ -16,14 +16,21 @@ const b = new FastBigInt(Buffer.from([0xff, 0xee, 0xff]));
 
 // Add using 'add(a, b)'
 const sum = FastBigInt.add(a, b);
+// Subtract using 'sub(a, b)'
+const sum = FastBigInt.sub(a, b);
+
 
 // Set thread limit for async functions (default 8)
 FastBigInt.setMaxThreads(8);
 
-// Add async on new thread
+// Add or subtract async on new thread
 const sum = await FastBigInt.addAsync(a, b);
+const sum = await FastBigInt.subAsync(a, b);
 
 FastBigInt.addAsync(a, b, (sum) => {
+    // Callback
+});
+FastBigInt.subAsync(a, b, (sum) => {
     // Callback
 });
 
@@ -32,6 +39,9 @@ FastBigInt.addAsync(a, b, (sum) => {
 const x = new FastBigInt(8);
 x.getBuffer() // = <Buffer 08 00 00 00 00 00 00 00>
 ```
+
+### Warning
+This module only supports positive numbers, so `sub(a, b)` when `a < b` will return invalid values
 # Performance
 Addition of two random numbers using `add` function. Time is in nanoseconds. Faster times are **bold**
 

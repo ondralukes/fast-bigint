@@ -44,6 +44,13 @@ class FastBigInt{
         );
     }
 
+    static sub(a, b){
+        return new FastBigInt(
+            'fromPtr',
+            internal.sub(a.#ptr, b.#ptr)
+        );
+    }
+
     static addAsync(a, b, callback){
         if(typeof callback === 'undefined'){
             return new Promise((resolve) => {
@@ -56,7 +63,20 @@ class FastBigInt{
                 callback(new FastBigInt('fromPtr', ptr));
             });
         }
+    }
 
+    static subAsync(a, b, callback){
+        if(typeof callback === 'undefined'){
+            return new Promise((resolve) => {
+                internal.subAsync(a.#ptr, b.#ptr, (ptr) => {
+                    resolve(new FastBigInt('fromPtr', ptr));
+                });
+            });
+        } else {
+            internal.subAsync(a.#ptr, b.#ptr, (ptr) => {
+                callback(new FastBigInt('fromPtr', ptr));
+            });
+        }
     }
 }
 

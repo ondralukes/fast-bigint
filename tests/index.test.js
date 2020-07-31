@@ -1,6 +1,7 @@
 const FastInt = require('../index');
 const crypto = require('crypto');
 const {toBigIntLE} = require('bigint-buffer');
+const randomTest = require('./randomTest');
 
 describe('constructor', function () {
     it('should construct from Number', function () {
@@ -70,6 +71,71 @@ describe('add', function () {
             expect(x.getBuffer()).toStrictEqual(Buffer.from('0300000000000000', 'hex'));
             done();
         });
+    });
+    it('should pass random test', function () {
+        expect(randomTest.add()).toStrictEqual(true);
+    });
+})
 
+describe('sub', function () {
+    it('should subtract simple numbers', function () {
+        const x = FastInt.sub(
+            new FastInt(5),
+            new FastInt(4)
+        );
+        expect(x.getBuffer()).toStrictEqual(Buffer.from('0100000000000000', 'hex'));
+    });
+    it('should subtract numbers bigger than 64 bits', function () {
+        const x = FastInt.sub(
+            new FastInt(Buffer.from('111111111111111101', 'hex')),
+            new FastInt(Buffer.from('101000000000000000', 'hex'))
+        );
+        expect(x.getBuffer()).toStrictEqual(Buffer.from('01011111111111110100000000000000', 'hex'));
+    });
+    it('should handle overflow', function () {
+        const x = FastInt.sub(
+            new FastInt(Buffer.from('0001', 'hex')),
+            new FastInt(Buffer.from('0100', 'hex'))
+        );
+        expect(x.getBuffer()).toStrictEqual(Buffer.from('ff00000000000000', 'hex'));
+    });
+    it('should subtract 131072 byte number faster than JavaScript BigInt', function () {
+        const bufa = crypto.randomBytes(131072);
+        const bufb = crypto.randomBytes(131072);
+
+        //Make sure a > b
+        bufb.writeUInt8(0, 131071);
+
+        const fastIntA = new FastInt(bufa);
+        const fastIntB = new FastInt(bufb);
+
+        const bigIntA = toBigIntLE(bufa);
+        const bigIntB = toBigIntLE(bufb);
+
+        let prev;
+        prev = process.hrtime();
+        FastInt.sub(fastIntA, fastIntB);
+        const fastIntTime = process.hrtime(prev);
+        const fastIntNanos = fastIntTime[0]*1000000000 + fastIntTime[1];
+
+        prev = process.hrtime();
+        const res = bigIntA - bigIntB;
+        const bigIntTime = process.hrtime(prev);
+        const bigIntNanos = bigIntTime[0]*1000000000 + bigIntTime[1];
+        console.log(`${fastIntNanos} < ${bigIntNanos} (${bigIntNanos - fastIntNanos} ns faster)`);
+        expect(fastIntNanos).toBeLessThan(bigIntNanos);
+    });
+    it('should subtract async using await', async function () {
+        const x = await FastInt.subAsync(new FastInt(2), new FastInt(1));
+        expect(x.getBuffer()).toStrictEqual(Buffer.from('0100000000000000', 'hex'));
+    });
+    it('should subtract async using callback', async function () {
+        FastInt.subAsync(new FastInt(4), new FastInt(3), (x) => {
+            expect(x.getBuffer()).toStrictEqual(Buffer.from('0100000000000000', 'hex'));
+            done();
+        });
+    });
+    it('should pass random test', function () {
+        expect(randomTest.sub()).toStrictEqual(true);
     });
 })
