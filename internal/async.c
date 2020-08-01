@@ -44,6 +44,7 @@ void* executor(void* data){
     pthread_mutex_unlock(&queueMutex);
   }
   __atomic_fetch_sub(&threadCount, 1, __ATOMIC_SEQ_CST);
+  return NULL;
 }
 
 void runAsync(async_op_t* op){

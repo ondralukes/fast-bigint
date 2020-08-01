@@ -139,3 +139,83 @@ describe('sub', function () {
         expect(randomTest.sub()).toStrictEqual(true);
     });
 })
+
+describe('compare', function () {
+    it('should compare simple numbers', function () {
+        expect(
+            FastInt.compare(
+                new FastInt(5),
+                new FastInt(4)
+            )
+        ).toStrictEqual(1);
+        expect(
+            FastInt.compare(
+                new FastInt(5),
+                new FastInt(40)
+            )
+        ).toStrictEqual(-1);
+        expect(
+            FastInt.compare(
+                new FastInt(40),
+                new FastInt(40)
+            )
+        ).toStrictEqual(0);
+    });
+    it('should compare numbers bigger than 64 bits', function () {
+        expect(
+            FastInt.compare(
+                new FastInt(Buffer.from('0000000000000000ff', 'hex')),
+                new FastInt(Buffer.from('0500000000000000ef', 'hex'))
+            )
+        ).toStrictEqual(1);
+        expect(
+            FastInt.compare(
+                new FastInt(Buffer.from('0000000000000000ee', 'hex')),
+                new FastInt(Buffer.from('0500000000000000ef', 'hex'))
+            )
+        ).toStrictEqual(-1);
+        expect(
+            FastInt.compare(
+                new FastInt(Buffer.from('0500000400000000ef', 'hex')),
+                new FastInt(Buffer.from('0500000400000000ef', 'hex'))
+            )
+        ).toStrictEqual(0);
+    });
+});
+
+describe('compare functions', function () {
+    const x = new FastInt(10);
+    const e = new FastInt(10);
+    const l = new FastInt(9);
+    const g = new FastInt(11);
+
+    it('.equals()', function () {
+        expect(x.equals(g)).toStrictEqual(false);
+        expect(x.equals(e)).toStrictEqual(true);
+        expect(x.equals(l)).toStrictEqual(false);
+    });
+
+    it('.isLessThan()', function () {
+        expect(x.isLessThan(g)).toStrictEqual(true);
+        expect(x.isLessThan(e)).toStrictEqual(false);
+        expect(x.isLessThan(l)).toStrictEqual(false);
+    });
+
+    it('.isGreaterThan()', function () {
+        expect(x.isGreaterThan(g)).toStrictEqual(false);
+        expect(x.isGreaterThan(e)).toStrictEqual(false);
+        expect(x.isGreaterThan(l)).toStrictEqual(true);
+    });
+
+    it('.isLessOrEqual()', function () {
+        expect(x.isLessOrEqual(g)).toStrictEqual(true);
+        expect(x.isLessOrEqual(e)).toStrictEqual(true);
+        expect(x.isLessOrEqual(l)).toStrictEqual(false);
+    });
+
+    it('.isGreaterOrEqual()', function () {
+        expect(x.isGreaterOrEqual(g)).toStrictEqual(false);
+        expect(x.isGreaterOrEqual(e)).toStrictEqual(true);
+        expect(x.isGreaterOrEqual(l)).toStrictEqual(true);
+    });
+});

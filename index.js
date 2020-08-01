@@ -37,6 +37,24 @@ class FastBigInt{
         internal.setUInt64(this.#ptr, number);
     }
 
+    equals(b){
+        return FastBigInt.compare(this, b) === 0;
+    }
+    isLessThan(b){
+        return FastBigInt.compare(this, b) === -1;
+    }
+    isGreaterThan(b){
+        return FastBigInt.compare(this, b) === 1;
+    }
+    isLessOrEqual(b){
+        return FastBigInt.compare(this, b) !== 1;
+    }
+    isGreaterOrEqual(b){
+        return FastBigInt.compare(this, b) !== -1;
+    }
+
+
+
     static add(a, b){
         return new FastBigInt(
             'fromPtr',
@@ -49,6 +67,10 @@ class FastBigInt{
             'fromPtr',
             internal.sub(a.#ptr, b.#ptr)
         );
+    }
+
+    static compare(a, b){
+        return internal.compare(a.#ptr, b.#ptr);
     }
 
     static addAsync(a, b, callback){

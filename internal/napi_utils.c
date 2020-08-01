@@ -12,7 +12,6 @@
             ? "empty error message"                               \
             : error_info->error_message;                          \
         napi_throw_error((env), NULL, message);                   \
-        return NULL;                                              \
       }                                                           \
     }                                                             \
   } while(0)
@@ -23,7 +22,7 @@ void getBigint(napi_env env, napi_value buf, bigint_t *res){
     napi_get_buffer_info(
       env,
       buf,
-      &res->base,
+      (void**)&res->base,
       &res->length
     )
   );
@@ -43,7 +42,7 @@ bigint_t* getBigintPtr(napi_env env, napi_value val){
     )
   );
 
-  return res;
+  return (bigint_t*)res;
 }
 
 napi_value fromBigintPtr(napi_env env, bigint_t * ptr){
@@ -76,8 +75,7 @@ void tsfn_result_cb(
         &res
       )
     );
-
-    napi_value tmp;
+    
     NAPI_CALL(
       env,
       napi_call_function(

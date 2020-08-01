@@ -13,7 +13,6 @@
             ? "empty error message"                               \
             : error_info->error_message;                          \
         napi_throw_error((env), NULL, message);                   \
-        return NULL;                                              \
       }                                                           \
     }                                                             \
   } while(0)
@@ -60,7 +59,7 @@ ex_setUInt64(napi_env env, napi_callback_info info){
     napi_get_value_int64(
       env,
       argv[1],
-      &number
+      (int64_t*)&number
     )
   );
 
@@ -184,6 +183,40 @@ ex_subAsync(napi_env env, napi_callback_info info){
 }
 
 static napi_value
+ex_compare(napi_env env, napi_callback_info info){
+
+  napi_value argv[2];
+  size_t argc = 2;
+
+  NAPI_CALL(
+    env,
+    napi_get_cb_info(
+      env,
+      info,
+      &argc,
+      argv,
+      NULL,
+      NULL
+    )
+  );
+
+  bigint_t* a = getBigintPtr(env, argv[0]);
+  bigint_t* b = getBigintPtr(env, argv[1]);
+
+  int res = compare(a, b);
+  napi_value resjs;
+  NAPI_CALL(
+    env,
+    napi_create_int32(
+      env,
+      res,
+      &resjs
+    )
+  );
+  return resjs;
+}
+
+static napi_value
 ex_setMaxThreads(napi_env env, napi_callback_info info){
   napi_value arg;
   size_t argc = 1;
@@ -206,7 +239,7 @@ ex_setMaxThreads(napi_env env, napi_callback_info info){
     napi_get_value_int64(
       env,
       arg,
-      &threads
+      (int64_t*)&threads
     )
   );
 
@@ -349,39 +382,6 @@ ex_getBuffer(napi_env env, napi_callback_info info){
   return buf;
 }
 
-static napi_value
-ex_update(napi_env env, napi_callback_info info){
-  napi_value argv[2];
-  size_t argc = 2;
-
-  NAPI_CALL(
-    env,
-    napi_get_cb_info(
-      env,
-      info,
-      &argc,
-      argv,
-      NULL,
-      NULL
-    )
-  );
-
-  int64_t ptr;
-
-  NAPI_CALL(
-    env,
-    napi_get_value_int64(
-      env,
-      argv[0],
-      &ptr
-    )
-  );
-
-  getBigint(env, argv[1], (bigint_t*)ptr);
-
-  return NULL;
-}
-
 void*
 add_function(
   napi_env env,
@@ -439,6 +439,13 @@ napi_value create_addon(napi_env env){
     res,
     ex_sub,
     "sub"
+  );
+
+  add_function(
+    env,
+    res,
+    ex_compare,
+    "compare"
   );
 
   add_function(

@@ -38,6 +38,19 @@ FastBigInt.subAsync(a, b, (sum) => {
 //Buffer size is padded to multiple of 8
 const x = new FastBigInt(8);
 x.getBuffer() // = <Buffer 08 00 00 00 00 00 00 00>
+
+//Compare using compare(a, b)
+//returns
+// -1 if a < b
+// 0 if a = b
+// 1 if a > b
+FastBigInt.compare(
+    new FastBigInt(10),
+    new FastBigInt(15)
+); // = -1
+
+//Compare using compare functions
+new FastBigInt(5).isGreaterOrEqual(new FastBigInt(4)); // = true
 ```
 
 ### Warning

@@ -100,3 +100,23 @@ bigint_t* sub(bigint_t* a, bigint_t* b){
 
   return res;
 }
+
+int compare(bigint_t* a, bigint_t* b){
+  uint64_t i = (a->length>b->length?a->length:b->length);
+
+  uint64_t* aptr = a->base + i;
+  uint64_t* bptr = b->base + i;
+
+  while(i > 0){
+    aptr--;
+    bptr--;
+    i--;
+
+    uint64_t av = i < a->length?READ_UINT64_LE(aptr):0;
+    uint64_t bv = i < b->length?READ_UINT64_LE(bptr):0;
+
+    if(av > bv) return 1;
+    if(av < bv) return -1;
+  }
+  return 0;
+}
