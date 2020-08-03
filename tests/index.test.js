@@ -66,7 +66,7 @@ describe('add', function () {
         const x = await FastInt.addAsync(new FastInt(1), new FastInt(2));
         expect(x.getBuffer()).toStrictEqual(Buffer.from('0300000000000000', 'hex'));
     });
-    it('should add async using callback', async function () {
+    it('should add async using callback', done => {
         FastInt.addAsync(new FastInt(1), new FastInt(2), (x) => {
             expect(x.getBuffer()).toStrictEqual(Buffer.from('0300000000000000', 'hex'));
             done();
@@ -129,7 +129,7 @@ describe('sub', function () {
         const x = await FastInt.subAsync(new FastInt(2), new FastInt(1));
         expect(x.getBuffer()).toStrictEqual(Buffer.from('0100000000000000', 'hex'));
     });
-    it('should subtract async using callback', async function () {
+    it('should subtract async using callback', done => {
         FastInt.subAsync(new FastInt(4), new FastInt(3), (x) => {
             expect(x.getBuffer()).toStrictEqual(Buffer.from('0100000000000000', 'hex'));
             done();
@@ -137,6 +137,42 @@ describe('sub', function () {
     });
     it('should pass random test', function () {
         expect(randomTest.sub()).toStrictEqual(true);
+    });
+})
+
+describe('mul', function () {
+    it('should multiply simple numbers', function () {
+        const x = FastInt.mul(
+            new FastInt(5),
+            new FastInt(4)
+        );
+        expect(x.getBuffer()).toStrictEqual(Buffer.from('1400000000000000', 'hex'));
+    });
+    it('should multiply numbers bigger than 64 bits', function () {
+        const x = FastInt.mul(
+            new FastInt(Buffer.from('cdab080704030201efbeadde', 'hex')),
+            new FastInt(Buffer.from('efef080704030201cefacada', 'hex'))
+        );
+        expect(x.getBuffer()).toStrictEqual(Buffer.from('63c7e4a27f1ec360101998f0609eac8c30fb970cd98350be', 'hex'));
+    });
+    it('should multiply async using await', async function () {
+        const x = await FastInt.mulAsync(
+            new FastInt(Buffer.from('cdab080704030201efbeadde', 'hex')),
+            new FastInt(Buffer.from('efef080704030201cefacada', 'hex'))
+        );
+        expect(x.getBuffer().toString('hex')).toStrictEqual('63c7e4a27f1ec360101998f0609eac8c30fb970cd98350be');
+    });
+    it('should multiply async using callback', done => {
+        FastInt.mulAsync(
+            new FastInt(Buffer.from('cdab080704030201efbeadde', 'hex')),
+            new FastInt(Buffer.from('efef080704030201cefacada', 'hex')),
+            (x) => {
+                expect(x.getBuffer().toString('hex')).toStrictEqual('63c7e4a27f1ec360101998f0609eac8c30fb970cd98350be');
+                done();
+            });
+    });
+    it('should pass random test', function () {
+        expect(randomTest.mul()).toStrictEqual(true);
     });
 })
 

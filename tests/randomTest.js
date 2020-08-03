@@ -26,6 +26,18 @@ module.exports.sub = function () {
     return true;
 }
 
+module.exports.mul = function () {
+    for(let len = 1;len < 8096; len*=2){
+        for(let i =0;i<64;i++){
+            if(!mulTest(len)){
+                console.log(`mul() returned invalid value. length ${len} run ${i}`);
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 function addTest(len) {
     const bufferA = crypto.randomBytes(len);
     const bufferB = crypto.randomBytes(len);
@@ -74,6 +86,25 @@ function subTest(len) {
     const fastIntResBuffer = FastInt.sub(fastIntA, fastIntB).getBuffer();
 
     const bigIntResBuffer = toBufferLE(bigIntA - bigIntB, fastIntResBuffer.byteLength);
+
+
+    const cmp = Buffer.compare(fastIntResBuffer, bigIntResBuffer);
+    return cmp === 0;
+}
+
+function mulTest(len){
+    const bufferA = crypto.randomBytes(len);
+    const bufferB = crypto.randomBytes(len);
+
+    const bigIntA = toBigIntLE(bufferA);
+    const bigIntB = toBigIntLE(bufferB);
+
+    const fastIntA = new FastInt(bufferA);
+    const fastIntB = new FastInt(bufferB);
+
+    const fastIntResBuffer = FastInt.mul(fastIntA, fastIntB).getBuffer();
+
+    const bigIntResBuffer = toBufferLE(bigIntA * bigIntB, fastIntResBuffer.byteLength);
 
 
     const cmp = Buffer.compare(fastIntResBuffer, bigIntResBuffer);

@@ -69,6 +69,13 @@ class FastBigInt{
         );
     }
 
+    static mul(a, b){
+        return new FastBigInt(
+            'fromPtr',
+            internal.mul(a.#ptr, b.#ptr)
+        );
+    }
+
     static compare(a, b){
         return internal.compare(a.#ptr, b.#ptr);
     }
@@ -96,6 +103,20 @@ class FastBigInt{
             });
         } else {
             internal.subAsync(a.#ptr, b.#ptr, (ptr) => {
+                callback(new FastBigInt('fromPtr', ptr));
+            });
+        }
+    }
+
+    static mulAsync(a, b, callback){
+        if(typeof callback === 'undefined'){
+            return new Promise((resolve) => {
+                internal.mulAsync(a.#ptr, b.#ptr, (ptr) => {
+                    resolve(new FastBigInt('fromPtr', ptr));
+                });
+            });
+        } else {
+            internal.mulAsync(a.#ptr, b.#ptr, (ptr) => {
                 callback(new FastBigInt('fromPtr', ptr));
             });
         }
