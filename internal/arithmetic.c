@@ -1,34 +1,19 @@
 #include "arithmetic.h"
 
-bigint_t* add(bigint_t* a, bigint_t* b){
+void addTo(bigint_t* a, bigint_t* b, bigint_t * res){
   uint64_t resLength = a->length;
   if(b->length > resLength) resLength = b->length;
 
+  resLength++;
 
-  uint64_t lastByteSum = 0;
-
-  if(resLength == a->length){
-    uint8_t * lastByte = (uint8_t*) a->base;
-    lastByte += resLength * 8 - 1;
-    lastByteSum += *lastByte;
-  }
-
-  if(resLength == b->length){
-    uint8_t * lastByte = (uint8_t*) b->base;
-    lastByte += resLength * 8 - 1;
-    lastByteSum += *lastByte;
-  }
-
-  if(lastByteSum > 254) resLength++;
-
-  bigint_t* res = createEmptyBigint(resLength);
+  resizeBigint(res, resLength);
   uint64_t * aptr = a->base;
   uint64_t * bptr = b->base;
   uint64_t * resptr = res->base;
 
   uint64_t carry = 0;
   uint64_t temp;
-  for(uint64_t i = 0; i < res->length;i++){
+  for(uint64_t i = 0; i < resLength;i++){
     uint64_t val = carry;
     carry = 0;
     if(i < a->length){
@@ -54,28 +39,66 @@ bigint_t* add(bigint_t* a, bigint_t* b){
     aptr++;
   }
 
-  return res;
+  res->length = resLength;
+
+  if(res->base[resLength - 1] == 0) res->length--;
 }
 
-bigint_t* sub(bigint_t* a, bigint_t* b){
-  uint64_t resLength = a->length-1;
-  while(resLength < b->length){
-    if(a->base[resLength] > b->base[resLength]) break;
-    resLength--;
-  }
+void addToShifted(bigint_t* a, bigint_t* b, bigint_t * res, uint64_t shift){
+  uint64_t resLength = a->length;
+  if((b->length+shift) > resLength) resLength = b->length + shift;
 
   resLength++;
 
-  bigint_t* res = createEmptyBigint(resLength);
+  resizeBigint(res, resLength);
+  uint64_t * aptr = a->base;
+  uint64_t * bptr = b->base - shift;
+  uint64_t * resptr = res->base;
 
+  uint64_t carry = 0;
+  uint64_t temp;
+  for(uint64_t i = 0; i < resLength;i++){
+    uint64_t val = carry;
+    carry = 0;
+    if(i < a->length){
+      uint64_t a_val = READ_UINT64_LE(aptr);
+      temp = val;
+      val += a_val;
+      if(val < temp){
+        carry++;
+      }
+    }
+    if(i >= shift && i < (b->length + shift)){
+      uint64_t b_val = READ_UINT64_LE(bptr);
+      temp = val;
+      val += b_val;
+      if(val < temp){
+        carry++;
+      }
+    }
+
+    WRITE_UINT64_LE(resptr, val);
+    resptr++;
+    bptr++;
+    aptr++;
+  }
+
+  res->length = resLength;
+
+  if(res->base[resLength - 1] == 0) res->length--;
+}
+
+void subTo(bigint_t* a, bigint_t* b, bigint_t * res){
   uint64_t* resptr = res->base;
   uint64_t* aptr = a->base;
   uint64_t* bptr = b->base;
 
+  resizeBigint(res, a->length);
   uint64_t carry = 0;
 
+  uint64_t finalLength = 0;
   uint64_t val,tmp;
-  for(uint64_t i = 0; i < res->length;i++){
+  for(uint64_t i = 0; i < a->length;i++){
     val = READ_UINT64_LE(aptr);
 
     if(i < b->length){
@@ -93,11 +116,25 @@ bigint_t* sub(bigint_t* a, bigint_t* b){
     }
 
     WRITE_UINT64_LE(resptr, val);
+    if(val != 0) finalLength = i;
     resptr++;
     aptr++;
     bptr++;
   }
 
+  res->length = finalLength+1;
+}
+
+void mulTo(bigint_t* a, bigint_t* b, bigint_t * res);
+bigint_t* add(bigint_t* a, bigint_t* b){
+  bigint_t* res = createEmptyBigint(a->length>b->length?a->length:b->length);
+  addTo(a, b, res);
+  return res;
+}
+
+bigint_t* sub(bigint_t* a, bigint_t* b){
+  bigint_t* res = createEmptyBigint(a->length);
+  subTo(a, b, res);
   return res;
 }
 
@@ -121,11 +158,9 @@ int compare(bigint_t* a, bigint_t* b){
   return 0;
 }
 
-bigint_t* karatsuba(bigint_t* a, bigint_t* b){
-  uint64_t alen = contentLength(a);
-  uint64_t blen = contentLength(b);
-  if(alen <= 1 && blen <= 1){
-    if(alen == 1 && blen == 1){
+void karatsuba(bigint_t* a, bigint_t* b, bigint_t* res, bigint_t* temp){
+  if(a->length <= 1 && b->length <= 1){
+    if(a->length == 1 && b->length == 1){
       uint64_t numa = READ_UINT64_LE(a->base);
       uint64_t numb = READ_UINT64_LE(b->base);
 
@@ -152,77 +187,76 @@ bigint_t* karatsuba(bigint_t* a, bigint_t* b){
       if(f0 < low){
         f1++;
       }
-      bigint_t* res = createEmptyBigint(f1==0?1:2);
+      res->length = f1==0?1:2;
 
       WRITE_UINT64_LE(res->base, f0);
       if(f1!=0) WRITE_UINT64_LE(res->base + 1, f1);
-      return res;
     } else {
-      bigint_t* res = createEmptyBigint(1);
-      res->base[0] = 0;
-      return res;
+      res->length = 0;
     }
+    return;
   }
-  if(alen == 0 || blen == 0){
-    bigint_t* res = createEmptyBigint(1);
-    res->base[0] = 0;
-    return res;
+
+  if(a->length == 0 || b->length == 0){
+    res->length = 0;
+    return;
   }
-  uint64_t base = ((alen<blen?alen:blen) + 1) / 2;
-  bigint_t* a1 = createSubBigint(a, 0, base);
-  bigint_t* b1 = createSubBigint(b, 0, base);
 
-  bigint_t* a2 = createSubBigint(a, base, alen);
-  bigint_t* b2 = createSubBigint(b, base, blen);
+  bigint_t a1,a2,b1,b2;
+  bigint_t* a3 = &temp[0];
+  bigint_t* b3 = &temp[1];
+  bigint_t* r2 = &temp[2];
+  bigint_t* r3 = &temp[3];
 
-  bigint_t* a3 = add(a1, a2);
+  uint64_t base = (a->length>b->length?a->length:b->length) / 2;
 
-  bigint_t* b3 = add(b1, b2);
+  createSubBigint(a, 0, base, &a1);
+  createSubBigint(b, 0, base, &b1);
 
+  createSubBigint(a, base, a->length, &a2);
+  createSubBigint(b, base, b->length, &b2);
 
-  bigint_t* r1 = karatsuba(a1, b1);
-  bigint_t* r2 = karatsuba(a2, b2);
-  bigint_t* r3 = karatsuba(a3, b3);
+  addTo(&a1, &a2, a3);
+  addTo(&b1, &b2, b3);
 
-  bigint_t* tmp = r3;
-  r3 = sub(r3, r1);
-  destroyBigint(tmp);
-  tmp = r3;
-  r3 = sub(r3, r2);
-  destroyBigint(tmp);
-  shift(r2, base*2);
-  shift(r3, base);
+  karatsuba(&a1, &b1, res, &temp[4]);
+  karatsuba(&a2, &b2, r2, &temp[4]);
+  karatsuba(a3, b3, r3, &temp[4]);
 
-  bigint_t* r12 = add(r1, r2);
-  bigint_t* r = add(r12, r3);
+  subTo(r3, res, r3);
+  subTo(r3, r2, r3);
 
-  destroyBigint(r1);
-  destroyBigint(r2);
-  destroyBigint(r12);
-  destroyBigint(r3);
-
-  free(a1);
-  free(b1);
-
-  free(a2);
-  free(b2);
-
-  destroyBigint(a3);
-  destroyBigint(b3);
-
-  return r;
+  addToShifted(res, r2, res, base*2);
+  addToShifted(res, r3, res, base);
 }
 
 bigint_t* mul(bigint_t* a, bigint_t* b){
-  return karatsuba(a, b);
-}
+  uint64_t len = a->length>b->length?a->length:b->length;
+  uint64_t layerLength = len;
+  uint64_t depth = 0;
 
-void shift(bigint_t* a, uint64_t n){
-  uint64_t newLen = a->length + n;
-  uint64_t* old = a->base;
-  a->base = malloc(newLen * sizeof(uint64_t));
-  memcpy(a->base + n, old, a->length*sizeof(uint64_t));
-  memset(a->base, 0, sizeof(uint64_t) * n);
-  free(old);
-  a->length = newLen;
+  while(len > 1){
+    uint64_t base = layerLength/2;
+    layerLength = base+1;
+    depth++;
+    if(layerLength == 2){
+      depth++;
+      break;
+    }
+  }
+
+  uint64_t tempLength = 5* depth * (sizeof(bigint_t) + len*2*sizeof(uint64_t));
+  bigint_t* temp = malloc(tempLength);
+  uint64_t * base = (uint64_t*)((uint64_t)temp + 5 * depth * sizeof(bigint_t));
+  for(uint64_t i = 0;i<5*depth;i++){
+    temp[i].base = base;
+    temp[i].length = 0;
+    temp[i].allocated = len*2;
+    base += len*2;
+  }
+
+  bigint_t* res = createEmptyBigint(len*2);
+  karatsuba(a, b, res, temp);
+  free(temp);
+  return res;
 }

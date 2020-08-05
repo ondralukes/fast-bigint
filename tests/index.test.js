@@ -39,9 +39,9 @@ describe('add', function () {
         );
         expect(x.getBuffer()).toStrictEqual(Buffer.from('02000000000000010100000000000000', 'hex'));
     });
-    it('should add 131072 byte number faster than JavaScript BigInt', function () {
-        const bufa = crypto.randomBytes(131072);
-        const bufb = crypto.randomBytes(131072);
+    it('should add 98304 byte number faster than JavaScript BigInt', function () {
+        const bufa = crypto.randomBytes(98304);
+        const bufb = crypto.randomBytes(98304);
 
         const fastIntA = new FastInt(bufa);
         const fastIntB = new FastInt(bufb);
@@ -99,12 +99,12 @@ describe('sub', function () {
         );
         expect(x.getBuffer()).toStrictEqual(Buffer.from('ff00000000000000', 'hex'));
     });
-    it('should subtract 131072 byte number faster than JavaScript BigInt', function () {
-        const bufa = crypto.randomBytes(131072);
-        const bufb = crypto.randomBytes(131072);
+    it('should subtract 98304 byte number faster than JavaScript BigInt', function () {
+        const bufa = crypto.randomBytes(98304);
+        const bufb = crypto.randomBytes(98304);
 
         //Make sure a > b
-        bufb.writeUInt8(0, 131071);
+        bufb.writeUInt8(0, 98303);
 
         const fastIntA = new FastInt(bufa);
         const fastIntB = new FastInt(bufb);
@@ -154,6 +154,29 @@ describe('mul', function () {
             new FastInt(Buffer.from('efef080704030201cefacada', 'hex'))
         );
         expect(x.getBuffer()).toStrictEqual(Buffer.from('63c7e4a27f1ec360101998f0609eac8c30fb970cd98350be', 'hex'));
+    });
+    it('should multiply 12288 byte number faster than JavaScript BigInt', function () {
+        const bufa = crypto.randomBytes(12288);
+        const bufb = crypto.randomBytes(12288);
+
+        const fastIntA = new FastInt(bufa);
+        const fastIntB = new FastInt(bufb);
+
+        const bigIntA = toBigIntLE(bufa);
+        const bigIntB = toBigIntLE(bufb);
+
+        let prev;
+        prev = process.hrtime();
+        FastInt.mul(fastIntA, fastIntB);
+        const fastIntTime = process.hrtime(prev);
+        const fastIntNanos = fastIntTime[0]*1000000000 + fastIntTime[1];
+
+        prev = process.hrtime();
+        const res = bigIntA * bigIntB;
+        const bigIntTime = process.hrtime(prev);
+        const bigIntNanos = bigIntTime[0]*1000000000 + bigIntTime[1];
+        console.log(`${fastIntNanos} < ${bigIntNanos} (${bigIntNanos - fastIntNanos} ns faster)`);
+        expect(fastIntNanos).toBeLessThan(bigIntNanos);
     });
     it('should multiply async using await', async function () {
         const x = await FastInt.mulAsync(

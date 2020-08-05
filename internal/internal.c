@@ -63,7 +63,8 @@ ex_setUInt64(napi_env env, napi_callback_info info){
     )
   );
 
-  memset(bigint->base, 0, bigint->length * 8);
+  resizeBigint(bigint, 1);
+  bigint->length = 1;
   WRITE_UINT64_LE(bigint->base, number);
   return NULL;
 }
@@ -327,8 +328,7 @@ ex_create(napi_env env, napi_callback_info info){
 
   bigint_t* bigint;
   if(argc == 1){
-    bigint = createEmptyBigint(1);
-    memset(bigint->base, 0, sizeof(uint64_t));
+    bigint = createEmptyBigint(256);
   } else {
     size_t size;
     void* data = getBufferData(env, argv[1], &size);
@@ -343,6 +343,8 @@ ex_create(napi_env env, napi_callback_info info){
 
     //Copy
     memcpy(bigint->base, data, size);
+
+    bigint->length = alignedSize;
   }
 
   napi_value js_ptr;

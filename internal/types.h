@@ -23,7 +23,8 @@
 
 typedef struct {
   uint64_t* base;
-  size_t length;
+  uint64_t allocated;
+  uint64_t length;
 } bigint_t;
 
 enum op_type{Add, Sub, Mul};
@@ -36,8 +37,9 @@ typedef struct {
 } async_op_t;
 
 bigint_t* createEmptyBigint(uint64_t size);
-bigint_t* createSubBigint(bigint_t * src, uint64_t start, uint64_t end);
+void createSubBigint(bigint_t * src, uint64_t start, uint64_t end, bigint_t* res);
 bigint_t* createMaxBigint(uint64_t size);
+void resizeBigint(bigint_t* x, uint64_t size);
 uint64_t contentLength(bigint_t* x);
 void destroyBigint(bigint_t* bigint);
 #endif

@@ -75,7 +75,7 @@ void tsfn_result_cb(
         &res
       )
     );
-    
+
     NAPI_CALL(
       env,
       napi_call_function(

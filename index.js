@@ -53,8 +53,6 @@ class FastBigInt{
         return FastBigInt.compare(this, b) !== -1;
     }
 
-
-
     static add(a, b){
         return new FastBigInt(
             'fromPtr',
