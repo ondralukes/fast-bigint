@@ -277,7 +277,7 @@ void karatsuba(bigint_t* a, bigint_t* b, bigint_t* res, bigint_t* temp){
 void mulTo(bigint_t* a, bigint_t* b, bigint_t* res){
   uint64_t len = a->length>b->length?a->length:b->length;
   uint64_t layerLength = len;
-  uint64_t depth = 0;
+  uint64_t depth = 1;
 
   while(len > 1){
     uint64_t base = layerLength/2;
@@ -318,6 +318,11 @@ bigint_t* divide(bigint_t* a, bigint_t* b){
 }
 
 void divTo(bigint_t* n, bigint_t* d, bigint_t * res){
+  if(n->length == 0 || (n->length == 1 && n->base[0] == 0)){
+    res->length = 0;
+    res->base[0] = 0;
+    return;
+  }
   //Convert to bigfloat
   bigfloat_t nf, df;
   nf.i = n;

@@ -357,8 +357,8 @@ ex_create(napi_env env, napi_callback_info info){
   } else {
     size_t size;
     void* data = getBufferData(env, argv[1], &size);
-
     size_t alignedSize = (size + 7)/8;
+    if(alignedSize == 0) alignedSize = 1;
 
     //Allocate buffer
     bigint = createEmptyBigint(alignedSize);
