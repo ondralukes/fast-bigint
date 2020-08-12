@@ -89,11 +89,11 @@ void addToShifted(bigint_t* a, bigint_t* b, bigint_t * res, uint64_t shift){
 }
 
 void subTo(bigint_t* a, bigint_t* b, bigint_t * res){
+  resizeBigint(res, a->length);
   uint64_t* resptr = res->base;
   uint64_t* aptr = a->base;
   uint64_t* bptr = b->base;
-
-  resizeBigint(res, a->length);
+  
   uint64_t carry = 0;
 
   uint64_t finalLength = 0;
@@ -125,7 +125,51 @@ void subTo(bigint_t* a, bigint_t* b, bigint_t * res){
   res->length = finalLength+1;
 }
 
-void mulTo(bigint_t* a, bigint_t* b, bigint_t * res);
+void subToShifted(bigint_t* a, bigint_t* b, bigint_t * res, uint64_t shift){
+  uint64_t shiftBytes = (shift+63)/64;
+  uint64_t len = (a->length+shiftBytes)>b->length?(a->length+shiftBytes):b->length;
+  resizeBigint(res, len);
+
+  uint64_t* resptr = res->base;
+  int64_t apos = -shift;
+  uint64_t* bptr = b->base;
+
+
+  uint64_t carry = 0;
+
+  uint64_t finalLength = 0;
+  uint64_t val,tmp;
+  for(uint64_t i = 0; i < len;i++){
+    if(apos >= -64 && i < a->length+shiftBytes){
+      val = getAtBit(a, apos);
+    } else {
+      val = 0;
+    }
+
+    if(i < b->length){
+      tmp = val;
+      val -= READ_UINT64_LE(bptr);
+      val -= carry;
+      if(val > tmp){
+        carry = 1;
+      } else {
+        carry = 0;
+      }
+    } else {
+      val -= carry;
+      carry = 0;
+    }
+
+    WRITE_UINT64_LE(resptr, val);
+    if(val != 0) finalLength = i;
+    resptr++;
+    apos+=64;
+    bptr++;
+  }
+
+  res->length = finalLength+1;
+}
+
 bigint_t* add(bigint_t* a, bigint_t* b){
   bigint_t* res = createEmptyBigint(a->length>b->length?a->length:b->length);
   addTo(a, b, res);
@@ -230,7 +274,7 @@ void karatsuba(bigint_t* a, bigint_t* b, bigint_t* res, bigint_t* temp){
   addToShifted(res, r3, res, base);
 }
 
-bigint_t* mul(bigint_t* a, bigint_t* b){
+void mulTo(bigint_t* a, bigint_t* b, bigint_t* res){
   uint64_t len = a->length>b->length?a->length:b->length;
   uint64_t layerLength = len;
   uint64_t depth = 0;
@@ -255,8 +299,158 @@ bigint_t* mul(bigint_t* a, bigint_t* b){
     base += len*2;
   }
 
-  bigint_t* res = createEmptyBigint(len*2);
+  resizeBigint(res,len*2);
   karatsuba(a, b, res, temp);
   free(temp);
+}
+
+bigint_t* mul(bigint_t* a, bigint_t* b){
+  uint64_t len = a->length>b->length?a->length:b->length;
+  bigint_t* res = createEmptyBigint(len*2);
+  mulTo(a,b,res);
   return res;
+}
+
+bigint_t* divide(bigint_t* a, bigint_t* b){
+  bigint_t* res = createEmptyBigint(a->length);
+  divTo(a,b,res);
+  return res;
+}
+
+void divTo(bigint_t* n, bigint_t* d, bigint_t * res){
+  //Convert to bigfloat
+  bigfloat_t nf, df;
+  nf.i = n;
+  df.i = d;
+
+  //Shift to 0.5 - 1.0
+  uint64_t last = d->base[d->length - 1];
+  uint64_t bit = 63;
+  while((last & (1UL << bit)) == 0 && bit > 0) bit--;
+  bit++;
+
+  df.exp = (d->length - 1) * 64 + bit;
+  nf.exp = (n->length - 1) * 64 + bit;
+
+  //Create temporary values
+  bigfloat_t t1, t2;
+
+  //48/17
+  t1.i = createEmptyBigint(2);
+  t1.i->base[0] = 0xd2d2d2d2d2d2d2d3;
+  t1.i->base[1] = 0x2;
+  t1.i->length = 2;
+  t1.exp = 64;
+
+  //32/17
+  t2.i = createEmptyBigint(2);
+  t2.i->base[0] = 0xe1e1e1e1e1e1e2bb;
+  t2.i->base[1] = 0x1;
+  t2.i->length = 2;
+  t2.exp = 64;
+
+  //Calculate first x
+  bigfloat_t t3;
+  t3.i = mul(t2.i, df.i);
+  t3.exp = t2.exp + df.exp;
+
+  bigint_t* x = createEmptyBigint(t2.i->length);
+  subToShifted(t1.i, t3.i, x, t3.exp - t1.exp);
+
+  //Convert x to bigfloat
+  bigfloat_t xf;
+  xf.i = x;
+  xf.exp = t3.exp;
+
+  bigfloat_t tempf;
+  tempf.i = createEmptyBigint(t2.i->length);
+
+  //Create temporary float for 2 (1 later)
+  bigfloat_t twof;
+  twof.i = createEmptyBigint(1);
+  twof.i->base[0] = 0x2;
+  twof.i->length = 1;
+  twof.exp = 0;
+
+  //Create temporary bigfloat for multiplication
+  bigfloat_t mult;
+  mult.i = createEmptyBigint(xf.i->length);
+
+  uint64_t p64 = (n->length - d->length + 1);
+  double p =  p64 * 64;
+
+  uint64_t steps = (uint64_t)ceil(
+    log2((p+1)/log2(17))
+  );
+
+  bigint_t* swap = createEmptyBigint(xf.i->length);
+  //Calculate precise x
+  for(uint64_t i = 0;i<steps;i++){
+    mulTo(df.i,xf.i,mult.i);
+    mult.exp = df.exp + xf.exp;
+
+    subToShifted(twof.i, mult.i, tempf.i, mult.exp - twof.exp);
+    tempf.exp = mult.exp;
+
+    xf.exp += tempf.exp;
+    mulTo(xf.i,tempf.i,swap);
+    bigint_t* tmp = xf.i;
+    xf.i = swap;
+    swap = tmp;
+  }
+
+  mulTo(nf.i,xf.i,res);
+  bigfloat_t rf;
+  rf.i = res;
+  rf.exp = nf.exp + xf.exp;
+
+  //Ceil if needed
+  uint64_t firstDigit = 0;
+  for(uint64_t i = res->length - 1;i < res->length;i--){
+    uint64_t x = READ_UINT64_LE(&res->base[i]);
+    if(x != 0){
+      for(uint8_t bit = 0;bit<64;bit++){
+        if(x == 1){
+          firstDigit = i*64+bit;
+          break;
+        }
+        x = x >> 1;
+      }
+      break;
+    }
+  }
+  uint64_t lastPrecise = firstDigit - p;
+
+  bool ceil = true;
+  //Check full 8-bytes
+  uint64_t i;
+  for(i = lastPrecise;i<rf.exp - 64;i+=64){
+    if(getAtBit(res,i) != 0xffffffffffffffff){
+      ceil = false;
+      break;
+    }
+  }
+
+  //Check remaining bits
+  if(ceil){
+    uint64_t rem = getAtBit(res,i);
+    uint64_t remMask = (1UL<<(rf.exp - i)) - 1;
+    if((rem & remMask) != remMask){
+      ceil = false;
+    }
+  }
+
+  uint64_t intlength = rf.i->length - rf.exp / 64;
+  uint64_t bitpos = rf.exp;
+
+  for(uint64_t i = 0;i<intlength;i++){
+    res->base[i] = getAtBit(res, bitpos);
+    bitpos+=64;
+  }
+  res->length = intlength;
+
+  if(ceil){
+    twof.i->base[0] = 1;
+    addTo(res,twof.i,res);
+  }
 }

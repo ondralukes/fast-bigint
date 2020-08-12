@@ -145,6 +145,31 @@ ex_mul(napi_env env, napi_callback_info info){
 }
 
 static napi_value
+ex_div(napi_env env, napi_callback_info info){
+
+  napi_value argv[2];
+  size_t argc = 2;
+
+  NAPI_CALL(
+    env,
+    napi_get_cb_info(
+      env,
+      info,
+      &argc,
+      argv,
+      NULL,
+      NULL
+    )
+  );
+
+  bigint_t* a = getBigintPtr(env, argv[0]);
+  bigint_t* b = getBigintPtr(env, argv[1]);
+
+  bigint_t* res = divide(a, b);
+  return fromBigintPtr(env, res);
+}
+
+static napi_value
 ex_addAsync(napi_env env, napi_callback_info info){
 
   napi_value argv[3];
@@ -505,6 +530,13 @@ napi_value create_addon(napi_env env){
     res,
     ex_mul,
     "mul"
+  );
+
+  add_function(
+    env,
+    res,
+    ex_div,
+    "div"
   );
 
   add_function(

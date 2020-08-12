@@ -74,6 +74,13 @@ class FastBigInt{
         );
     }
 
+    static div(a, b){
+        return new FastBigInt(
+            'fromPtr',
+            internal.div(a.#ptr, b.#ptr)
+        );
+    }
+
     static compare(a, b){
         return internal.compare(a.#ptr, b.#ptr);
     }

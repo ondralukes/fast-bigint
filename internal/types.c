@@ -35,3 +35,22 @@ void resizeBigint(bigint_t* x, uint64_t size){
     x->allocated = newSize;
   }
 }
+
+uint64_t getAtBit(bigint_t*x, int64_t n){
+  int64_t li = n<0?((n-63)/64):(n/64);
+  uint64_t low = 0;
+  if(li >= 0) low = READ_UINT64_LE(&x->base[li]);
+
+  int64_t hi = n<0?(n/64):((n+63)/64);
+
+  uint64_t high = 0;
+  if(hi < (int64_t)x->length) high = READ_UINT64_LE(&x->base[hi]);
+
+  int8_t bits = n % 64;
+  if(bits < 0) bits += 64;
+
+  uint64_t lp = low >> (uint64_t)bits;
+  uint64_t hp = (high & ((1UL << bits) - 1)) << (64-bits);
+
+  return hp|lp;
+}

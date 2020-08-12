@@ -27,6 +27,11 @@ typedef struct {
   uint64_t length;
 } bigint_t;
 
+typedef struct {
+  bigint_t* i;
+  uint64_t exp;
+} bigfloat_t;
+
 enum op_type{Add, Sub, Mul};
 
 typedef struct {
@@ -42,4 +47,6 @@ bigint_t* createMaxBigint(uint64_t size);
 void resizeBigint(bigint_t* x, uint64_t size);
 uint64_t contentLength(bigint_t* x);
 void destroyBigint(bigint_t* bigint);
+
+uint64_t getAtBit(bigint_t*x, int64_t n);
 #endif
