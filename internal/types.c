@@ -39,12 +39,12 @@ void resizeBigint(bigint_t* x, uint64_t size){
 uint64_t getAtBit(bigint_t*x, int64_t n){
   int64_t li = n<0?((n-63)/64):(n/64);
   uint64_t low = 0;
-  if(li >= 0) low = READ_UINT64_LE(&x->base[li]);
+  if(li >= 0 && li < (int64_t)x->length) low = READ_UINT64_LE(&x->base[li]);
 
   int64_t hi = n<0?(n/64):((n+63)/64);
 
   uint64_t high = 0;
-  if(hi < (int64_t)x->length) high = READ_UINT64_LE(&x->base[hi]);
+  if(hi < (int64_t)x->length && hi >= 0) high = READ_UINT64_LE(&x->base[hi]);
 
   int8_t bits = n % 64;
   if(bits < 0) bits += 64;

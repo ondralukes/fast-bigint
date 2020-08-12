@@ -93,7 +93,7 @@ void subTo(bigint_t* a, bigint_t* b, bigint_t * res){
   uint64_t* resptr = res->base;
   uint64_t* aptr = a->base;
   uint64_t* bptr = b->base;
-  
+
   uint64_t carry = 0;
 
   uint64_t finalLength = 0;
@@ -453,4 +453,12 @@ void divTo(bigint_t* n, bigint_t* d, bigint_t * res){
     twof.i->base[0] = 1;
     addTo(res,twof.i,res);
   }
+
+  destroyBigint(t1.i);
+  destroyBigint(t2.i);
+  destroyBigint(t3.i);
+  destroyBigint(x);
+  destroyBigint(mult.i);
+  destroyBigint(swap);
+  destroyBigint(twof.i);
 }
