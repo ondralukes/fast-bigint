@@ -54,3 +54,12 @@ uint64_t getAtBit(bigint_t*x, int64_t n){
 
   return hp|lp;
 }
+
+uint64_t bitLength(bigint_t *x){
+  uint64_t last = READ_UINT64_LE(&x->base[x->length - 1]);
+  uint64_t bit = 63;
+  while((last & (1UL << bit)) == 0 && bit > 0) bit--;
+  bit++;
+  
+  return x->length * 64 - 64 + bit;
+}

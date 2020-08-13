@@ -102,17 +102,23 @@ void subTo(bigint_t* a, bigint_t* b, bigint_t * res){
     val = READ_UINT64_LE(aptr);
 
     if(i < b->length){
+      uint64_t x = READ_UINT64_LE(bptr);
       tmp = val;
-      val -= READ_UINT64_LE(bptr);
+      val -= x;
+      val -= carry;
+      if(val > tmp || (carry == 1 && x == 0xffffffffffffffff)){
+        carry = 1;
+      } else {
+        carry = 0;
+      }
+    } else {
+      tmp = val;
       val -= carry;
       if(val > tmp){
         carry = 1;
       } else {
         carry = 0;
       }
-    } else {
-      val -= carry;
-      carry = 0;
     }
 
     WRITE_UINT64_LE(resptr, val);
@@ -147,17 +153,25 @@ void subToShifted(bigint_t* a, bigint_t* b, bigint_t * res, uint64_t shift){
     }
 
     if(i < b->length){
+      uint64_t x = READ_UINT64_LE(bptr);
       tmp = val;
-      val -= READ_UINT64_LE(bptr);
+      val -= x;
+
+      val -= carry;
+
+      if(val > tmp || (carry == 1 && x == 0xffffffffffffffff)){
+        carry = 1;
+      } else {
+        carry = 0;
+      }
+    } else {
+      tmp = val;
       val -= carry;
       if(val > tmp){
         carry = 1;
       } else {
         carry = 0;
       }
-    } else {
-      val -= carry;
-      carry = 0;
     }
 
     WRITE_UINT64_LE(resptr, val);
@@ -318,11 +332,13 @@ bigint_t* divide(bigint_t* a, bigint_t* b){
 }
 
 void divTo(bigint_t* n, bigint_t* d, bigint_t * res){
-  if(n->length == 0 || (n->length == 1 && n->base[0] == 0)){
-    res->length = 0;
-    res->base[0] = 0;
+  int cmp = compare(n,d);
+  if(cmp != 1){
+    res->length = 1;
+    res->base[0] = cmp == 0?1:0;
     return;
   }
+
   //Convert to bigfloat
   bigfloat_t nf, df;
   nf.i = n;
@@ -330,12 +346,16 @@ void divTo(bigint_t* n, bigint_t* d, bigint_t * res){
 
   //Shift to 0.5 - 1.0
   uint64_t last = d->base[d->length - 1];
-  uint64_t bit = 63;
-  while((last & (1UL << bit)) == 0 && bit > 0) bit--;
-  bit++;
+  uint64_t bit = 0;
+  while(true){
+    if(last == 0) break;
+    last = last >> 1;
+    bit++;
+  }
 
-  df.exp = (d->length - 1) * 64 + bit;
-  nf.exp = (n->length - 1) * 64 + bit;
+  uint64_t exp = (d->length - 1) * 64 + bit;
+  df.exp = exp;
+  nf.exp = exp;
 
   //Create temporary values
   bigfloat_t t1, t2;
@@ -359,13 +379,11 @@ void divTo(bigint_t* n, bigint_t* d, bigint_t * res){
   t3.i = mul(t2.i, df.i);
   t3.exp = t2.exp + df.exp;
 
-  bigint_t* x = createEmptyBigint(t2.i->length);
-  subToShifted(t1.i, t3.i, x, t3.exp - t1.exp);
-
-  //Convert x to bigfloat
   bigfloat_t xf;
-  xf.i = x;
+  xf.i = createEmptyBigint(t2.i->length);
+  subToShifted(t1.i, t3.i, xf.i, t3.exp - t1.exp);
   xf.exp = t3.exp;
+
 
   bigfloat_t tempf;
   tempf.i = createEmptyBigint(t2.i->length);
@@ -381,8 +399,7 @@ void divTo(bigint_t* n, bigint_t* d, bigint_t * res){
   bigfloat_t mult;
   mult.i = createEmptyBigint(xf.i->length);
 
-  uint64_t p64 = (n->length - d->length + 1);
-  double p =  p64 * 64;
+  uint64_t p =  bitLength(n) + bitLength(d);
 
   uint64_t steps = (uint64_t)ceil(
     log2((p+1)/log2(17))
@@ -396,9 +413,9 @@ void divTo(bigint_t* n, bigint_t* d, bigint_t * res){
 
     subToShifted(twof.i, mult.i, tempf.i, mult.exp - twof.exp);
     tempf.exp = mult.exp;
-
     xf.exp += tempf.exp;
     mulTo(xf.i,tempf.i,swap);
+
     bigint_t* tmp = xf.i;
     xf.i = swap;
     swap = tmp;
@@ -424,12 +441,13 @@ void divTo(bigint_t* n, bigint_t* d, bigint_t * res){
       break;
     }
   }
-  uint64_t lastPrecise = firstDigit - p;
+  uint64_t lastPrecise = firstDigit - p - 1;
 
   bool ceil = true;
+
   //Check full 8-bytes
   uint64_t i;
-  for(i = lastPrecise;i<rf.exp - 64;i+=64){
+  for(i = lastPrecise;i<=rf.exp - 64;i+=64){
     if(getAtBit(res,i) != 0xffffffffffffffff){
       ceil = false;
       break;
@@ -462,7 +480,7 @@ void divTo(bigint_t* n, bigint_t* d, bigint_t * res){
   destroyBigint(t1.i);
   destroyBigint(t2.i);
   destroyBigint(t3.i);
-  destroyBigint(x);
+  destroyBigint(xf.i);
   destroyBigint(mult.i);
   destroyBigint(swap);
   destroyBigint(twof.i);

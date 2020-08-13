@@ -49,4 +49,5 @@ uint64_t contentLength(bigint_t* x);
 void destroyBigint(bigint_t* bigint);
 
 uint64_t getAtBit(bigint_t*x, int64_t n);
+uint64_t bitLength(bigint_t *x);
 #endif

@@ -199,6 +199,29 @@ describe('mul', function () {
     });
 })
 
+describe('div', function () {
+    it('should multiply simple numbers', function () {
+        const x = FastInt.div(
+            new FastInt(645434434),
+            new FastInt(8675)
+        );
+
+        expect(x.getBuffer()).toStrictEqual(Buffer.from('a122010000000000', 'hex'));
+    });
+    it('should multiply numbers bigger than 64 bits', function () {
+        const a = new FastInt(Buffer.from('460bc87985c567813f8a691ec2fdefc5f81564c4d38c2ef22f0930f4afd4ab77', 'hex'));
+        const b = new FastInt(Buffer.from('6bcb1d5fb56b25d3c9176b7a08728d02d2d1aa0249538e4fa8640568a8b6', 'hex'));
+        const x = FastInt.div(
+           a, b
+        );
+
+        expect(x.getBuffer()).toStrictEqual(Buffer.from('b8a7000000000000', 'hex'));
+    });
+    it('should pass random test', function () {
+        expect(randomTest.div()).toStrictEqual(true);
+    });
+})
+
 describe('compare', function () {
     it('should compare simple numbers', function () {
         expect(
