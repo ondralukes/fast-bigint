@@ -106,19 +106,18 @@ void subTo(bigint_t* a, bigint_t* b, bigint_t * res){
       tmp = val;
       val -= x;
       val -= carry;
-      if(val > tmp || (carry == 1 && x == 0xffffffffffffffff)){
+      int8_t cmp = (tmp < val) ? -1 : (tmp > val);
+      if(cmp == -1){
+        carry = 1;
+      } else if(carry == 1 && cmp == 0){
         carry = 1;
       } else {
         carry = 0;
       }
-    } else {
-      tmp = val;
+
+    } else if(carry == 1){
       val -= carry;
-      if(val > tmp){
-        carry = 1;
-      } else {
-        carry = 0;
-      }
+      if(val != 0xffffffffffffffff) carry = 0;
     }
 
     WRITE_UINT64_LE(resptr, val);
@@ -156,22 +155,19 @@ void subToShifted(bigint_t* a, bigint_t* b, bigint_t * res, uint64_t shift){
       uint64_t x = READ_UINT64_LE(bptr);
       tmp = val;
       val -= x;
-
       val -= carry;
-
-      if(val > tmp || (carry == 1 && x == 0xffffffffffffffff)){
+      int8_t cmp = (tmp < val) ? -1 : (tmp > val);
+      if(cmp == -1){
+        carry = 1;
+      } else if(carry == 1 && cmp == 0){
         carry = 1;
       } else {
         carry = 0;
       }
+
     } else {
-      tmp = val;
       val -= carry;
-      if(val > tmp){
-        carry = 1;
-      } else {
-        carry = 0;
-      }
+      if(val != 0xffffffffffffffff) carry = 0;
     }
 
     WRITE_UINT64_LE(resptr, val);
