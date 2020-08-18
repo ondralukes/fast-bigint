@@ -38,6 +38,30 @@ module.exports.mul = function () {
     return true;
 }
 
+module.exports.div = function () {
+    for(let len = 1;len < 256; len*=2){
+        for(let i =0;i< 1024;i++){
+            if(!divTest(len)){
+                console.log(`div() returned invalid value. length ${len} run ${i}`);
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+module.exports.mod = function () {
+    for(let len = 1;len < 256; len*=2){
+        for(let i =0;i< 1024;i++){
+            if(!modTest(len)){
+                console.log(`mod() returned invalid value. length ${len} run ${i}`);
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 function addTest(len) {
     const bufferA = crypto.randomBytes(len);
     const bufferB = crypto.randomBytes(len);
@@ -108,5 +132,55 @@ function mulTest(len){
 
 
     const cmp = Buffer.compare(fastIntResBuffer, bigIntResBuffer);
+    return cmp === 0;
+}
+
+function divTest(len){
+    const bufferA = crypto.randomBytes(len);
+    const blen = Math.ceil(Math.random() * len);
+    const bufferB = crypto.randomBytes(blen);
+
+    if(bufferA.readUInt8(len-1) === 0) bufferA.writeUInt8(1,len-1);
+    if(blen === 1 && bufferB.readUInt8(0) === 0) bufferB.writeUInt8(1);
+    if(bufferB.readUInt8(blen-1) === 0) bufferB.writeUInt8(1,blen-1);
+
+    const bigIntA = toBigIntLE(bufferA);
+    const bigIntB = toBigIntLE(bufferB);
+
+    const fastIntA = new FastInt(bufferA);
+    const fastIntB = new FastInt(bufferB);
+
+    const fastIntResBuffer = FastInt.div(fastIntA, fastIntB).getBuffer();
+
+    const bigIntResBuffer = toBufferLE(bigIntA / bigIntB, fastIntResBuffer.byteLength);
+
+
+    const cmp = Buffer.compare(fastIntResBuffer, bigIntResBuffer);
+
+    return cmp === 0;
+}
+
+function modTest(len){
+    const bufferA = crypto.randomBytes(len);
+    const blen = Math.ceil(Math.random() * len);
+    const bufferB = crypto.randomBytes(blen);
+
+    if(bufferA.readUInt8(len-1) === 0) bufferA.writeUInt8(1,len-1);
+    if(blen === 1 && bufferB.readUInt8(0) === 0) bufferB.writeUInt8(1);
+    if(bufferB.readUInt8(blen-1) === 0) bufferB.writeUInt8(1,blen-1);
+
+    const bigIntA = toBigIntLE(bufferA);
+    const bigIntB = toBigIntLE(bufferB);
+
+    const fastIntA = new FastInt(bufferA);
+    const fastIntB = new FastInt(bufferB);
+
+    const fastIntResBuffer = FastInt.mod(fastIntA, fastIntB).getBuffer();
+
+    const bigIntResBuffer = toBufferLE(bigIntA % bigIntB, fastIntResBuffer.byteLength);
+
+
+    const cmp = Buffer.compare(fastIntResBuffer, bigIntResBuffer);
+
     return cmp === 0;
 }

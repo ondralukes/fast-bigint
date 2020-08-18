@@ -27,7 +27,12 @@ typedef struct {
   uint64_t length;
 } bigint_t;
 
-enum op_type{Add, Sub, Mul};
+typedef struct {
+  bigint_t* i;
+  uint64_t exp;
+} bigfloat_t;
+
+enum op_type{Add, Sub, Mul, Div, Mod};
 
 typedef struct {
   enum op_type type;
@@ -37,9 +42,18 @@ typedef struct {
 } async_op_t;
 
 bigint_t* createEmptyBigint(uint64_t size);
+void copy(bigint_t* d, bigint_t* s);
 void createSubBigint(bigint_t * src, uint64_t start, uint64_t end, bigint_t* res);
 bigint_t* createMaxBigint(uint64_t size);
 void resizeBigint(bigint_t* x, uint64_t size);
 uint64_t contentLength(bigint_t* x);
 void destroyBigint(bigint_t* bigint);
+
+uint64_t getAtBit(bigint_t*x, int64_t n);
+uint64_t bitLength(bigint_t *x);
+
+uint8_t get8(bigint_t* x, uint64_t n);
+void set8(bigint_t* x, uint64_t n, uint8_t val);
+
+uint64_t get64at8(bigint_t* x, int64_t p);
 #endif
