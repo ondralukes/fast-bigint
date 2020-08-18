@@ -40,7 +40,7 @@ module.exports.mul = function () {
 
 module.exports.div = function () {
     for(let len = 1;len < 256; len*=2){
-        for(let i =0;i< 32;i++){
+        for(let i =0;i< 1024;i++){
             if(!divTest(len)){
                 console.log(`div() returned invalid value. length ${len} run ${i}`);
                 return false;
@@ -125,9 +125,10 @@ function mulTest(len){
 
 function divTest(len){
     const bufferA = crypto.randomBytes(len);
-    const blen = Math.ceil(Math.random() * len) + 1;
+    const blen = Math.ceil(Math.random() * len);
     const bufferB = crypto.randomBytes(blen);
 
+    if(bufferA.readUInt8(len-1) === 0) bufferA.writeUInt8(1,len-1);
     if(blen === 1 && bufferB.readUInt8(0) === 0) bufferB.writeUInt8(1);
     if(bufferB.readUInt8(blen-1) === 0) bufferB.writeUInt8(1,blen-1);
 

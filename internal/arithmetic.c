@@ -130,29 +130,20 @@ void subTo(bigint_t* a, bigint_t* b, bigint_t * res){
   res->length = finalLength+1;
 }
 
-void subToShifted(bigint_t* a, bigint_t* b, bigint_t * res, uint64_t shift){
-  uint64_t shiftBytes = (shift+63)/64;
-  uint64_t len = (a->length+shiftBytes)>b->length?(a->length+shiftBytes):b->length;
-  resizeBigint(res, len);
-
+void subToShifted8(bigint_t* a, bigint_t* b, bigint_t * res, uint64_t shift){
+  resizeBigint(res, a->length);
   uint64_t* resptr = res->base;
-  int64_t apos = -shift;
-  uint64_t* bptr = b->base;
-
+  uint64_t* aptr = a->base;
+  int64_t bpos = -shift;
 
   uint64_t carry = 0;
 
   uint64_t finalLength = 0;
   uint64_t val,tmp;
-  for(uint64_t i = 0; i < len;i++){
-    if(apos >= -64 && i < a->length+shiftBytes){
-      val = getAtBit(a, apos);
-    } else {
-      val = 0;
-    }
-
-    if(i < b->length){
-      uint64_t x = READ_UINT64_LE(bptr);
+  for(uint64_t i = 0; i < a->length;i++){
+    val = READ_UINT64_LE(aptr);
+    if(i >= shift/8 && i < (b->length + (shift+7)/8)){
+      uint64_t x = get64at8(b, bpos);
       tmp = val;
       val -= x;
       val -= carry;
@@ -165,7 +156,7 @@ void subToShifted(bigint_t* a, bigint_t* b, bigint_t * res, uint64_t shift){
         carry = 0;
       }
 
-    } else {
+    } else if(carry == 1){
       val -= carry;
       if(val != 0xffffffffffffffff) carry = 0;
     }
@@ -173,8 +164,8 @@ void subToShifted(bigint_t* a, bigint_t* b, bigint_t * res, uint64_t shift){
     WRITE_UINT64_LE(resptr, val);
     if(val != 0) finalLength = i;
     resptr++;
-    apos+=64;
-    bptr++;
+    aptr++;
+    bpos+=8;
   }
 
   res->length = finalLength+1;
@@ -208,6 +199,30 @@ int compare(bigint_t* a, bigint_t* b){
 
     if(av > bv) return 1;
     if(av < bv) return -1;
+  }
+  return 0;
+}
+
+int compareShifted8(bigint_t* a, bigint_t* b, uint64_t shift){
+  uint64_t i = (a->length>(b->length + (shift+7)/8))?a->length:(b->length + (shift+7)/8);
+
+  uint64_t* aptr = a->base + i;
+  uint64_t bpos = i*8 - shift;
+
+  while(i > 0){
+    aptr--;
+    bpos-=8;
+    i--;
+
+    uint64_t av = i < a->length?READ_UINT64_LE(aptr):0;
+    uint64_t bv = (i < (b->length+(shift+7)/8) && i >= shift/8)?get64at8(b, bpos):0;
+
+    if(av > bv){
+       return 1;
+     }
+    if(av < bv){
+      return -1;
+    }
   }
   return 0;
 }
@@ -327,157 +342,78 @@ bigint_t* divide(bigint_t* a, bigint_t* b){
   return res;
 }
 
-void divTo(bigint_t* n, bigint_t* d, bigint_t * res){
-  int cmp = compare(n,d);
-  if(cmp != 1){
-    res->length = 1;
-    res->base[0] = cmp == 0?1:0;
-    return;
+
+void divTo(bigint_t* x, bigint_t* y, bigint_t * q){
+  bigint_t* r = createEmptyBigint(y->length);
+  copy(r,x);
+  uint64_t n = (x->length << 3) - 1;
+  uint64_t t = (y->length << 3) - 1;
+
+  while(get8(x, n) == 0) n--;
+  while(get8(y, t) == 0) t--;
+
+  uint64_t qlen64 = (n - t) / 8+1;
+  if(qlen64 == 0) qlen64++;
+  resizeBigint(q, qlen64);
+  q->length = qlen64;
+  bigint_t* swap = createEmptyBigint(y->length);
+  bigint_t* sgmulSwap = createEmptyBigint(1);
+  sgmulSwap->length = 1;
+
+  for(uint64_t i = 0;i<qlen64;i++){
+    q->base[i] = 0;
   }
 
-  //Convert to bigfloat
-  bigfloat_t nf, df;
-  nf.i = n;
-  df.i = d;
+  uint64_t cmps = 0;
+  while(compareShifted8(r, y, n-t) != -1){
+    uint64_t tmp = get8(q, n-t);
+    set8(q, n-t, tmp + 1);
 
-  //Shift to 0.5 - 1.0
-  uint64_t last = d->base[d->length - 1];
-  uint64_t bit = 0;
-  while(true){
-    if(last == 0) break;
-    last = last >> 1;
-    bit++;
+    subToShifted8(r, y, r, n-t);
+    cmps++;
   }
 
-  uint64_t exp = (d->length - 1) * 64 + bit;
-  df.exp = exp;
-  nf.exp = exp;
 
-  //Create temporary values
-  bigfloat_t t1, t2;
-
-  //48/17
-  t1.i = createEmptyBigint(2);
-  t1.i->base[0] = 0xd2d2d2d2d2d2d2d3;
-  t1.i->base[1] = 0x2;
-  t1.i->length = 2;
-  t1.exp = 64;
-
-  //32/17
-  t2.i = createEmptyBigint(2);
-  t2.i->base[0] = 0xe1e1e1e1e1e1e2bb;
-  t2.i->base[1] = 0x1;
-  t2.i->length = 2;
-  t2.exp = 64;
-
-  //Calculate first x
-  bigfloat_t t3;
-  t3.i = mul(t2.i, df.i);
-  t3.exp = t2.exp + df.exp;
-
-  bigfloat_t xf;
-  xf.i = createEmptyBigint(t2.i->length);
-  subToShifted(t1.i, t3.i, xf.i, t3.exp - t1.exp);
-  xf.exp = t3.exp;
-
-
-  bigfloat_t tempf;
-  tempf.i = createEmptyBigint(t2.i->length);
-
-  //Create temporary float for 2 (1 later)
-  bigfloat_t twof;
-  twof.i = createEmptyBigint(1);
-  twof.i->base[0] = 0x2;
-  twof.i->length = 1;
-  twof.exp = 0;
-
-  //Create temporary bigfloat for multiplication
-  bigfloat_t mult;
-  mult.i = createEmptyBigint(xf.i->length);
-
-  uint64_t p =  bitLength(n) + bitLength(d);
-
-  uint64_t steps = (uint64_t)ceil(
-    log2((p+1)/log2(17))
-  );
-
-  bigint_t* swap = createEmptyBigint(xf.i->length);
-  //Calculate precise x
-  for(uint64_t i = 0;i<steps;i++){
-    mulTo(df.i,xf.i,mult.i);
-    mult.exp = df.exp + xf.exp;
-
-    subToShifted(twof.i, mult.i, tempf.i, mult.exp - twof.exp);
-    tempf.exp = mult.exp;
-    xf.exp += tempf.exp;
-    mulTo(xf.i,tempf.i,swap);
-
-    bigint_t* tmp = xf.i;
-    xf.i = swap;
-    swap = tmp;
-  }
-
-  mulTo(nf.i,xf.i,res);
-  bigfloat_t rf;
-  rf.i = res;
-  rf.exp = nf.exp + xf.exp;
-
-  //Ceil if needed
-  uint64_t firstDigit = 0;
-  for(uint64_t i = res->length - 1;i < res->length;i--){
-    uint64_t x = READ_UINT64_LE(&res->base[i]);
-    if(x != 0){
-      for(uint8_t bit = 0;bit<64;bit++){
-        if(x == 1){
-          firstDigit = i*64+bit;
-          break;
-        }
-        x = x >> 1;
-      }
-      break;
+  for(uint64_t i = n;i >= t+1;i--){
+    if(get8(r, i) == get8(y, t)){
+      set8(q, i-t-1, 0xff);
+    } else {
+      uint64_t tmp = ((uint64_t)get8(r, i) << 8) | get8(r, i-1);
+      set8(q, i-t-1, tmp/get8(y, t));
     }
-  }
-  uint64_t lastPrecise = firstDigit - p - 1;
 
-  bool ceil = true;
+    while(true){
+      uint64_t m = ((get8(y, t) << 8) | get8(y, t-1)) * get8(q, i-t-1);
+      uint64_t rm = (get8(r, i) << 16) | (get8(r, i-1) << 8) | get8(r, i-2);
 
-  //Check full 8-bytes
-  uint64_t i;
-  for(i = lastPrecise;i<=rf.exp - 64;i+=64){
-    if(getAtBit(res,i) != 0xffffffffffffffff){
-      ceil = false;
-      break;
+      if(m <= rm) break;
+
+      set8(q, i-t-1, get8(q,i-t-1)-1);
     }
-  }
 
-  //Check remaining bits
-  if(ceil){
-    uint64_t rem = getAtBit(res,i);
-    uint64_t remMask = (1UL<<(rf.exp - i)) - 1;
-    if((rem & remMask) != remMask){
-      ceil = false;
+    sgmulSwap->base[0] = get8(q, i-t-1);
+    mulTo(y, sgmulSwap, swap);
+    shift8(swap, i-t-1);
+
+    if(compare(r, swap) == -1){
+      subToShifted8(swap, y, swap, i-t-1);
+      set8(q, i-t-1, get8(q,i-t-1)-1);
     }
+
+    subTo(r, swap, r);
   }
-
-  uint64_t intlength = rf.i->length - rf.exp / 64;
-  uint64_t bitpos = rf.exp;
-
-  for(uint64_t i = 0;i<intlength;i++){
-    res->base[i] = getAtBit(res, bitpos);
-    bitpos+=64;
-  }
-  res->length = intlength;
-
-  if(ceil){
-    twof.i->base[0] = 1;
-    addTo(res,twof.i,res);
-  }
-
-  destroyBigint(t1.i);
-  destroyBigint(t2.i);
-  destroyBigint(t3.i);
-  destroyBigint(xf.i);
-  destroyBigint(mult.i);
   destroyBigint(swap);
-  destroyBigint(twof.i);
+  destroyBigint(sgmulSwap);
+  destroyBigint(r);
+}
+
+void shift8(bigint_t* a, uint64_t n){
+  uint64_t resz = (n+7)/8;
+  resizeBigint(a, a->length + resz);
+  memset(&a->base[a->length], 0, resz*sizeof(uint64_t));
+  a->length += resz;
+  uint8_t * base8 = (uint8_t*)a->base;
+  memmove(&base8[n], base8, a->length*sizeof(uint64_t));
+  memset(base8, 0, n*sizeof(uint8_t));
+  if(a->base[a->length-1] == 0) a->length--;
 }
