@@ -217,8 +217,63 @@ describe('div', function () {
 
         expect(x.getBuffer()).toStrictEqual(Buffer.from('b8a7000000000000', 'hex'));
     });
+    it('should divide async using await', async function () {
+        const x = await FastInt.divAsync(
+            new FastInt(Buffer.from('460bc87985c567813f8a691ec2fdefc5f81564c4d38c2ef22f0930f4afd4ab77', 'hex')),
+            new FastInt(Buffer.from('6bcb1d5fb56b25d3c9176b7a08728d02d2d1aa0249538e4fa8640568a8b6', 'hex'))
+        );
+        expect(x.getBuffer().toString('hex')).toStrictEqual('b8a7000000000000');
+    });
+    it('should divide async using callback', done => {
+        FastInt.divAsync(
+            new FastInt(Buffer.from('460bc87985c567813f8a691ec2fdefc5f81564c4d38c2ef22f0930f4afd4ab77', 'hex')),
+            new FastInt(Buffer.from('6bcb1d5fb56b25d3c9176b7a08728d02d2d1aa0249538e4fa8640568a8b6', 'hex')),
+            (x) => {
+                expect(x.getBuffer().toString('hex')).toStrictEqual('b8a7000000000000');
+                done();
+            });
+    });
     it('should pass random test', function () {
         expect(randomTest.div()).toStrictEqual(true);
+    });
+})
+
+describe('mod', function () {
+    it('should mod simple numbers', function () {
+        const x = FastInt.mod(
+            new FastInt(645434434),
+            new FastInt(8675)
+        );
+
+        expect(x.getBuffer()).toStrictEqual(Buffer.from('7f16000000000000', 'hex'));
+    });
+    it('should mod numbers bigger than 64 bits', function () {
+        const a = new FastInt(Buffer.from('460bc87985c567813f8a691ec2fdefc5f81564c4d38c2ef22f0930f4afd4ab77', 'hex'));
+        const b = new FastInt(Buffer.from('6bcb1d5fb56b25d3c9176b7a08728d02d2d1aa0249538e4fa8640568a8b6', 'hex'));
+        const x = FastInt.mod(
+            a, b
+        );
+
+        expect(x.getBuffer()).toStrictEqual(Buffer.from('5e09abac1c0a3f5572c8eb44ce7fe2aa5c47bd6a9c0f8eeb50e4a5abc9af0000', 'hex'));
+    });
+    it('should mod async using await', async function () {
+        const x = await FastInt.modAsync(
+            new FastInt(Buffer.from('460bc87985c567813f8a691ec2fdefc5f81564c4d38c2ef22f0930f4afd4ab77', 'hex')),
+            new FastInt(Buffer.from('6bcb1d5fb56b25d3c9176b7a08728d02d2d1aa0249538e4fa8640568a8b6', 'hex'))
+        );
+        expect(x.getBuffer().toString('hex')).toStrictEqual('5e09abac1c0a3f5572c8eb44ce7fe2aa5c47bd6a9c0f8eeb50e4a5abc9af0000');
+    });
+    it('should mod async using callback', done => {
+        FastInt.modAsync(
+            new FastInt(Buffer.from('460bc87985c567813f8a691ec2fdefc5f81564c4d38c2ef22f0930f4afd4ab77', 'hex')),
+            new FastInt(Buffer.from('6bcb1d5fb56b25d3c9176b7a08728d02d2d1aa0249538e4fa8640568a8b6', 'hex')),
+            (x) => {
+                expect(x.getBuffer().toString('hex')).toStrictEqual('5e09abac1c0a3f5572c8eb44ce7fe2aa5c47bd6a9c0f8eeb50e4a5abc9af0000');
+                done();
+            });
+    });
+    it('should pass random test', function () {
+        expect(randomTest.mod()).toStrictEqual(true);
     });
 })
 

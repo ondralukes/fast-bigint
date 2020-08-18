@@ -337,14 +337,23 @@ bigint_t* mul(bigint_t* a, bigint_t* b){
 }
 
 bigint_t* divide(bigint_t* a, bigint_t* b){
-  bigint_t* res = createEmptyBigint(a->length);
-  divTo(a,b,res);
-  return res;
+  bigint_t* q = createEmptyBigint(a->length);
+  bigint_t* r = createEmptyBigint(b->length);
+  divTo(a,b,q,r);
+  destroyBigint(r);
+  return q;
+}
+
+bigint_t* mod(bigint_t* a, bigint_t* b){
+  bigint_t* q = createEmptyBigint(a->length);
+  bigint_t* r = createEmptyBigint(b->length);
+  divTo(a,b,q,r);
+  destroyBigint(q);
+  return r;
 }
 
 
-void divTo(bigint_t* x, bigint_t* y, bigint_t * q){
-  bigint_t* r = createEmptyBigint(y->length);
+void divTo(bigint_t* x, bigint_t* y, bigint_t * q, bigint_t* r){
   copy(r,x);
   uint64_t n = (x->length << 3) - 1;
   uint64_t t = (y->length << 3) - 1;
@@ -404,7 +413,9 @@ void divTo(bigint_t* x, bigint_t* y, bigint_t * q){
   }
   destroyBigint(swap);
   destroyBigint(sgmulSwap);
-  destroyBigint(r);
+
+  r->length = y->length;
+  while(r->base[r->length -1] == 0) r->length--;
 }
 
 void shift8(bigint_t* a, uint64_t n){

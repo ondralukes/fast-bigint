@@ -24,6 +24,10 @@ void execute(async_op_t * op){
     res = sub(op->argv[0],op->argv[1]);
   } else if(op->type == Mul){
     res = mul(op->argv[0],op->argv[1]);
+  } else if(op->type == Div){
+    res = divide(op->argv[0],op->argv[1]);
+  } else if(op->type == Mod){
+    res = mod(op->argv[0],op->argv[1]);
   }
 
   callThreadsafeFunc(op->callback, &res);

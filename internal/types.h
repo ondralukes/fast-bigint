@@ -32,7 +32,7 @@ typedef struct {
   uint64_t exp;
 } bigfloat_t;
 
-enum op_type{Add, Sub, Mul};
+enum op_type{Add, Sub, Mul, Div, Mod};
 
 typedef struct {
   enum op_type type;

@@ -81,6 +81,13 @@ class FastBigInt{
         );
     }
 
+    static mod(a, b){
+        return new FastBigInt(
+            'fromPtr',
+            internal.mod(a.#ptr, b.#ptr)
+        );
+    }
+
     static compare(a, b){
         return internal.compare(a.#ptr, b.#ptr);
     }
@@ -126,6 +133,36 @@ class FastBigInt{
             });
         }
     }
+
+    static divAsync(a, b, callback){
+        if(typeof callback === 'undefined'){
+            return new Promise((resolve) => {
+                internal.divAsync(a.#ptr, b.#ptr, (ptr) => {
+                    resolve(new FastBigInt('fromPtr', ptr));
+                });
+            });
+        } else {
+            internal.divAsync(a.#ptr, b.#ptr, (ptr) => {
+                callback(new FastBigInt('fromPtr', ptr));
+            });
+        }
+    }
+
+    static modAsync(a, b, callback){
+        if(typeof callback === 'undefined'){
+            return new Promise((resolve) => {
+                internal.modAsync(a.#ptr, b.#ptr, (ptr) => {
+                    resolve(new FastBigInt('fromPtr', ptr));
+                });
+            });
+        } else {
+            internal.modAsync(a.#ptr, b.#ptr, (ptr) => {
+                callback(new FastBigInt('fromPtr', ptr));
+            });
+        }
+    }
+
+
 }
 
 module.exports = FastBigInt;
