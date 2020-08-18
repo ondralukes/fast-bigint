@@ -2,8 +2,6 @@
 Module for fast operations with long integers.
 
 Arithmetic operations are written in C.
-# Warning
-This module is in early development state. It only supports addition, subtraction and multiplication.
 # Usage
 ```javascript
 const FastBigInt = require('fast-bigint');
@@ -20,6 +18,10 @@ const x = FastBigInt.add(a, b);
 const x = FastBigInt.sub(a, b);
 // Multiply using 'mul(a, b)'
 const x = FastBigInt.mul(a, b);
+// Divide using 'div(a, b)'
+const x = FastBigInt.div(a, b);
+// Modulo using 'mod(a, b)'
+const x = FastBigInt.mod(a, b);
 
 
 // Set thread limit for async functions (default 8)
@@ -29,6 +31,8 @@ FastBigInt.setMaxThreads(8);
 const x = await FastBigInt.addAsync(a, b);
 const x = await FastBigInt.subAsync(a, b);
 const x = await FastBigInt.mulAsync(a, b);
+const x = await FastBigInt.divAsync(a, b);
+const x = await FastBigInt.modAsync(a, b);
 
 FastBigInt.addAsync(a, b, (x) => {
     // Callback
@@ -37,6 +41,12 @@ FastBigInt.subAsync(a, b, (x) => {
     // Callback
 });
 FastBigInt.mulAsync(a, b, (x) => {
+    // Callback
+});
+FastBigInt.divAsync(a, b, (x) => {
+    // Callback
+});
+FastBigInt.modAsync(a, b, (x) => {
     // Callback
 });
 
@@ -65,5 +75,7 @@ This module only supports positive numbers, so `sub(a, b)` when `a < b` will ret
 It's currently faster than JavaScript BigInt
 * When adding or subtracting numbers larger than ~98304 bytes
 * When multiplying numbers larger than ~12288 bytes
+
+Division and modulo are now slower than JS BigInt, I will try to improve the algorithm in the future
 
 You can perform calculations on multiple threads with async functions (unlike JavaScript, which is single-threaded)
